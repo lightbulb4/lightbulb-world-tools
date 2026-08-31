@@ -1,0 +1,23 @@
+{
+  "name": "com.lightbulb.world-tools",
+  "displayName": "Lightbulb World Tools",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Console-first Unity editor diagnostics for GPU instancing, lightmap texel usage, vertex counts, and mesh UVs.",
+  "author": {
+    "name": "Lightbulb",
+    "email": "nobodysystems@gmail.com",
+    "url": "https://github.com/lightbulb4"
+  },
+  "license": "MIT",
+  "documentationUrl": "https://github.com/lightbulb4/lightbulb-world-tools#readme",
+  "changelogUrl": "https://github.com/lightbulb4/lightbulb-world-tools/blob/main/Packages/com.lightbulb.world-tools/CHANGELOG.md",
+  "keywords": [
+    "VRChat",
+    "optimization",
+    "GPU instancing",
+    "lightmaps",
+    "geometry",
+    "UV"
+  ]
+}
