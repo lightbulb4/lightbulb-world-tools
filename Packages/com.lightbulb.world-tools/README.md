@@ -2,7 +2,7 @@
 
 Small Unity editor diagnostics for inspecting scene rendering and geometry. The tools intentionally report to Unity's Console instead of maintaining a separate results window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
 
-Open the commands under **Tools > Lightbulb > World Tools**.
+Open the commands directly under **Tools > Lightbulb**.
 
 ## Rendering
 

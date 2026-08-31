@@ -10,7 +10,7 @@ Add the Lightbulb VPM listing to VRChat Creator Companion:
 
 Then add **Lightbulb World Tools** to a Unity 2022.3 project.
 
-All commands are under **Tools > Lightbulb > World Tools**. See the [package documentation](Packages/com.lightbulb.world-tools/README.md) for details.
+All commands are directly under **Tools > Lightbulb**. See the [package documentation](Packages/com.lightbulb.world-tools/README.md) for details.
 
 ## License
 

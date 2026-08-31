@@ -12,7 +12,7 @@ public static class FindActionableInstancing_ListAll
     private const bool IncludeInactive = true;
     private const bool OnlySingleMaterialRenderers = true;
 
-    [MenuItem("Tools/Lightbulb/World Tools/Rendering/Find GPU Instancing Candidates")]
+    [MenuItem("Tools/Lightbulb/Find GPU Instancing Candidates")]
     private static void Run()
     {
         var buckets = new Dictionary<BroadKey, List<RInfo>>();

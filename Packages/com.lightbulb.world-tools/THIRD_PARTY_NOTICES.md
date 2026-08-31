@@ -6,7 +6,7 @@ Source: <https://github.com/Bunny83/Utilities/tree/master/UVViewer>
 
 Included file: `Editor/UVViewer/UVViewer.cs`
 
-The included source matches upstream Git blob `5ca7654e2de5d45c6524c0bdf30f028af0aa3c07`. Its Unity menu path was changed to place the command under the Lightbulb World Tools menu.
+The included source matches upstream Git blob `5ca7654e2de5d45c6524c0bdf30f028af0aa3c07`. Its Unity menu path was changed to place the command under **Tools > Lightbulb**.
 
 MIT License
 

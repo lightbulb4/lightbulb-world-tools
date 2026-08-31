@@ -12,7 +12,7 @@ public static class ListVertexCounts
     private const bool IncludeInactive = true;
     private const int MinVertexFilter = 0;    // e.g., set to 100 to hide tiny meshes
 
-    [MenuItem("Tools/Lightbulb/World Tools/Geometry/Rank Renderers by Vertex Count")]
+    [MenuItem("Tools/Lightbulb/Rank Renderers by Vertex Count")]
     private static void RankRenderers()
     {
         var rows = new List<(Object ctx, string path, int verts)>();
@@ -56,7 +56,7 @@ public static class ListVertexCounts
         Debug.Log($"Renderer ranking complete — {rows.Count} renderers, total {total:N0} verts.");
     }
 
-    [MenuItem("Tools/Lightbulb/World Tools/Geometry/Rank GameObjects by Vertex Count")]
+    [MenuItem("Tools/Lightbulb/Rank GameObjects by Vertex Count")]
     private static void RankGameObjectsAggregate()
     {
         // Sum all renderers under each GameObject root (or any GameObject directly clicked in Hierarchy)

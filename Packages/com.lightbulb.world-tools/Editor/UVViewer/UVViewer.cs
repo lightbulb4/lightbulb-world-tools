@@ -36,7 +36,7 @@ namespace B83.UVViewer
             BilinearWithoutAlpha = 5,
         }
 
-        [MenuItem("Tools/Lightbulb/World Tools/Geometry/UV Viewer")]
+        [MenuItem("Tools/Lightbulb/UV Viewer")]
         static void Init()
         {
             GetWindow<UVViewer>();

@@ -8,7 +8,7 @@ namespace Lightbulb.WorldTools
 {
 public static class FindLightmapTexelHogs
 {
-    [MenuItem("Tools/Lightbulb/World Tools/Lighting/Rank by Lightmap Texel Usage")]
+    [MenuItem("Tools/Lightbulb/Rank by Lightmap Texel Usage")]
     private static void Find()
     {
         var lms = LightmapSettings.lightmaps;
