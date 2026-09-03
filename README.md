@@ -1,6 +1,6 @@
 # Lightbulb World Tools
 
-Lightbulb World Tools is a small collection of console-first Unity editor diagnostics for inspecting VRChat worlds without adding custom runtime components or a dedicated tool window.
+Lightbulb World Tools is a small collection of console-first Unity editor diagnostics and targeted repairs for VRChat worlds, without custom runtime components or a dedicated tool window.
 
 ## Install
 
@@ -14,4 +14,4 @@ All commands are directly under **Tools > Lightbulb**. See the [package document
 
 ## License
 
-Lightbulb World Tools is released under the [MIT License](LICENSE.md). The bundled UV Viewer was written by Bunny83 and is included under its original MIT license; see [Third-Party Notices](Packages/com.lightbulb.world-tools/THIRD_PARTY_NOTICES.md).
+Lightbulb World Tools is released under the [MIT License](LICENSE.md). Bunny83's UV Viewer retains its MIT license; the VideoPlayerShim repair template contains ISC-licensed ArchiTechVR source. See [Third-Party Notices](Packages/com.lightbulb.world-tools/THIRD_PARTY_NOTICES.md).

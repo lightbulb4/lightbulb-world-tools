@@ -1,6 +1,6 @@
 # Lightbulb World Tools
 
-Small Unity editor diagnostics for inspecting scene rendering and geometry. The tools intentionally report to Unity's Console instead of maintaining a separate results window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
+Small Unity editor diagnostics and repairs for world projects. The tools intentionally report to Unity's Console instead of maintaining a separate results window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
 
 Open the commands directly under **Tools > Lightbulb**.
 
@@ -33,6 +33,20 @@ Groups vertex counts by the GameObject directly containing each renderer and lis
 Opens Bunny83's UV Viewer for the selected mesh. It can display UV channels, submeshes, textures, triangles, and the corresponding geometry in Scene view. The bundled source is the upstream MIT-licensed `UVViewer.cs`, with only its Unity menu path changed for consistency.
 
 See [Third-Party Notices](THIRD_PARTY_NOTICES.md) for attribution and license details.
+
+## Video playback
+
+### Fix VideoPlayerShim URL Resolver
+
+Run **Tools > Lightbulb > Fix VideoPlayerShim URL Resolver** outside Play Mode. This fixes the known VideoPlayerShim **1.5.0** bug that sends direct streams such as `rtspt://` through yt-dlp and can pass its error output to AVPro as a media path.
+
+- Checks the installed package's identity, version, and complete resolver-source fingerprint before editing. No downloads or extra package dependencies.
+- Only patches the verified original 1.5.0 resolver in `Packages/dev.architech.videoplayershim`. Recognized previous repairs are left alone. Other versions, custom source, linked folders, and cached/external packages are refused.
+- Passes non-HTTPS URLs directly to the player before starting yt-dlp. HTTPS resolution keeps its existing format options; failed resolver processes stop, and only an HTTP(S) URL from stdout can reach the player.
+- Changes only `Editor/PlayModeUrlResolverShim.cs`, preserving UTF-8 BOM/line-ending style and its `.meta` file. Scenes, player settings, and yt-dlp itself are untouched.
+- Atomically replaces the source with an exact original-file backup under `Library/LightbulbWorldTools/Backups/VideoPlayerShim/`. The Console prints the backup path. To undo, close Unity and copy that backup over the resolver script. This is not Unity Undo; deleting `Library` also deletes these backups.
+
+Unity recompiles after a successful repair. Package reinstalls or updates may replace the patched source; rerun the command only if this specific issue returns. This does not repair unrelated yt-dlp or playback errors.
 
 ## Requirements
 

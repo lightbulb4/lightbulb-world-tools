@@ -1,9 +1,9 @@
 {
   "name": "com.lightbulb.world-tools",
   "displayName": "Lightbulb World Tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "unity": "2022.3",
-  "description": "Console-first Unity editor diagnostics for GPU instancing, lightmap texel usage, vertex counts, and mesh UVs.",
+  "description": "Console-first Unity editor tools for GPU instancing, lightmap texel usage, vertex counts, mesh UVs, and safe VideoPlayerShim repair.",
   "author": {
     "name": "Lightbulb",
     "email": "nobodysystems@gmail.com",
