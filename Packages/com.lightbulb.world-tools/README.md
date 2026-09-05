@@ -14,6 +14,20 @@ Multi-material renderers are intentionally skipped. The report is advisory: the 
 
 ## Lighting
 
+### Fix Mochie Linear Textures in Scene
+
+Run **Tools > Lightbulb > Fix Mochie Linear Textures in Scene** outside Play Mode. It applies the same texture import change as Mochie's **"This texture is marked as sRGB, but should be linear" > Fix Now**, across the active scene.
+
+- Supports exactly **Mochie/Standard** and **Mochie/Standard Lite**, using the warning rules verified against StandardEditor **v2.13**. Mochie source is neither modified nor bundled; the tool has no Mochie assembly dependency.
+- Includes inactive objects, every renderer material slot, and terrain material templates. Other loaded scenes, Prefab Mode, and materials only referenced by scripts or animations are not scanned.
+- Separate primary workflow: metallic, roughness/smoothness, occlusion, and height (except triplanar). Packed primary workflow: packed map only. Standard also checks the separate or packed detail maps. Lite's hidden detail data maps are excluded.
+- Only textures currently marked sRGB are changed. Each unique texture is reimported once. Color maps, normal-map import warnings, Uber, Mobile, and other shader families are outside the scan.
+- Logs the candidate textures and material/property names, then asks for confirmation. **The texture import setting changes everywhere that texture is used**, including other materials and scenes, even if another use is a color slot.
+- Skips textures without a texture importer, read-only metadata, and non-embedded packages. Reports individual reimport failures and verifies that each fixed texture remains linear.
+- Backs up original `.meta` files under `Library/LightbulbWorldTools/Backups/MochieLinearTextures/<run>/`, preserving project-relative paths. The Console prints the location. To roll back, close Unity and copy those `.meta` files to their matching project paths. This restores all import settings to their pre-fix values; it is not Unity Undo. Deleting `Library` removes the backups.
+
+A second run makes no changes when the scene's supported textures are already linear.
+
 ### Rank by Lightmap Texel Usage
 
 Ranks baked renderers by their estimated allocation in the current lightmaps. This is total lightmap pixel usage, not texel density per world-space unit. Bake the scene before running the command.

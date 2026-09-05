@@ -1,9 +1,9 @@
 {
   "name": "com.lightbulb.world-tools",
   "displayName": "Lightbulb World Tools",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "unity": "2022.3",
-  "description": "Console-first Unity editor tools for GPU instancing, lightmap texel usage, vertex counts, mesh UVs, and safe VideoPlayerShim repair.",
+  "description": "Console-first Unity editor tools for GPU instancing, lightmap texel usage, vertex counts, mesh UVs, Mochie Standard texture import fixes, and safe VideoPlayerShim repair.",
   "author": {
     "name": "Lightbulb",
     "email": "nobodysystems@gmail.com",
