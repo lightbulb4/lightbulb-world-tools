@@ -1,10 +1,25 @@
 # Lightbulb World Tools
 
-Small Unity editor diagnostics and repairs for world projects. The tools intentionally report to Unity's Console instead of maintaining a separate results window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
+Small Unity editor diagnostics and repairs for world projects. Diagnostics report to Unity's Console; texture batching has a preview window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
 
 Open the commands directly under **Tools > Lightbulb**.
 
 ## Rendering
+
+### Resize Referenced Textures
+
+Multi-select materials in the **Project** window, then right-click **Materials > Resize Referenced Textures...**. Also available at **Tools > Lightbulb > Resize Referenced Textures...**.
+
+- The preview lists unique textures assigned to the selected materials' current shader texture properties, including normal maps and hidden slots. It does not search old saved properties from previous shaders, shader globals, or script-assigned textures. Hover the slot count to see the selected material/property names.
+- **Maximum resolution** defaults to **1024**. Only lowers larger import caps when the source exceeds the limit; already smaller/equal textures and lower caps are left alone. Preserves aspect ratio and the existing resize algorithm. Original image files are never resized or overwritten.
+- Processes **Default and every existing enabled platform override**. Does not create overrides or raise any platform's cap.
+- **Crunch compression:** Leave unchanged (default), Enable, or Disable. This applies independently of size, including to textures already below the cap. Explicit DXT1/DXT5/ETC RGB/ETC2 RGBA formats switch only to/from their matching Crunch variant. Incompatible explicit formats (BC7, ASTC, HDR, etc.) are flagged, not converted; their size can still be reduced. Automatic remains Automatic and follows Unity's supported target-format selection. Uncompressed/HDR Automatic settings are not switched to Crunch. Other settings, including compression quality, sRGB, normal type, and mipmaps, are preserved.
+- Exclude individual textures before applying. The material set stays fixed until you click **Use selected materials**; selecting a texture in the preview does not replace the material set. **Refresh preview** reads current settings again.
+- **Shared textures change everywhere they are used**, including unselected materials and other scenes. Skips generated textures, RenderTextures, cubes, arrays, lightmap-type imports, read-only metadata, and non-embedded package assets.
+- Confirms the operation, refuses stale import-setting previews, reimports each texture once, verifies the requested settings, and reports failures. Cancellation stops between textures; completed changes remain applied.
+- Backs up original `.meta` files under `Library/LightbulbWorldTools/Backups/MaterialTextures/<run>/` before changing anything. The Console prints the location. To restore, close Unity and copy the backed-up `.meta` files to the matching project paths. This restores all import settings, not just size/Crunch; **it is not Unity Undo**. Deleting `Library` removes the backups.
+
+Crunch targets disk/download size rather than GPU memory. Reducing resolution also reduces GPU memory usage. No textures are changed merely by installing the package or opening the preview.
 
 ### Find GPU Instancing Candidates
 

@@ -1,6 +1,6 @@
 # Lightbulb World Tools
 
-Lightbulb World Tools is a small collection of console-first Unity editor diagnostics and targeted repairs for VRChat worlds, without custom runtime components or a dedicated tool window.
+Lightbulb World Tools is a small collection of Unity editor diagnostics, targeted repairs, and material texture tools for VRChat worlds, without custom runtime components.
 
 ## Install
 

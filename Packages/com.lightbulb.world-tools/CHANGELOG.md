@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 - 2026-09-11
+
+- Added **Resize Referenced Textures** to the material right-click menu and **Tools > Lightbulb**. Multi-select materials, preview and exclude textures, cap resolution, and optionally enable or disable Crunch.
+- Handles existing platform overrides, backs up import settings, and reimports each shared texture once. Original images are untouched.
+
 ## 0.1.3 - 2026-09-05
 
 - Added **Fix Mochie Linear Textures in Scene** for Mochie Standard and Standard Lite, matching their separate/packed workflow and height/detail warning rules.
