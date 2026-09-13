@@ -17,6 +17,8 @@ namespace Lightbulb.WorldTools
             internal Material Material;
             internal bool Primary;
             internal bool Detail;
+            internal bool CleanupPrimary;
+            internal bool CleanupDetail;
             internal bool Included = true;
             internal string State;
             internal readonly Dictionary<string, Hash128> Sources = new Dictionary<string, Hash128>();
@@ -33,6 +35,7 @@ namespace Lightbulb.WorldTools
         {
             internal int Changed;
             internal int Reused;
+            internal int ClearedReferences;
             internal bool Cancelled;
             internal readonly List<string> Outputs = new List<string>();
             internal readonly List<string> Errors = new List<string>();
@@ -54,8 +57,12 @@ namespace Lightbulb.WorldTools
                 {
                     bool primary = Eligible(material, false);
                     bool detail = includeDetail && material.shader.name == "Mochie/Standard" && Eligible(material, true);
-                    if (!primary && !detail) { preview.Notes.Add(material.name + ": already packed, or no separate data maps to pack"); continue; }
-                    var entry = new Entry { Material = material, Primary = primary, Detail = detail, State = EditorJsonUtility.ToJson(material) };
+                    bool cleanupPrimary = CleanupEligible(material, false, preview.Notes);
+                    bool cleanupDetail = includeDetail && material.shader.name == "Mochie/Standard" && CleanupEligible(material, true, preview.Notes);
+                    if (!primary && !detail && !cleanupPrimary && !cleanupDetail)
+                    { preview.Notes.Add(material.name + ": no separate maps to pack or safe leftover references to clear"); continue; }
+                    var entry = new Entry { Material = material, Primary = primary, Detail = detail,
+                        CleanupPrimary = cleanupPrimary, CleanupDetail = cleanupDetail, State = EditorJsonUtility.ToJson(material) };
                     foreach (bool isDetail in new[] { false, true })
                     {
                         if (isDetail ? !detail : !primary) continue;
@@ -70,6 +77,12 @@ namespace Lightbulb.WorldTools
                                 throw new InvalidOperationException(property + ": full-resolution streaming mip is not loaded");
                             entry.Sources[path] = AssetDatabase.GetAssetDependencyHash(path);
                         }
+                    }
+                    foreach (bool isDetail in new[] { false, true })
+                    {
+                        if (isDetail ? !cleanupDetail : !cleanupPrimary) continue;
+                        string path = AssetDatabase.GetAssetPath(material.GetTexture(isDetail ? "_DetailPackedMap" : "_PackedMap"));
+                        entry.Sources[path] = AssetDatabase.GetAssetDependencyHash(path);
                     }
                     preview.Entries.Add(entry);
                 }
@@ -88,6 +101,35 @@ namespace Lightbulb.WorldTools
             foreach (string property in required)
                 if (!material.HasProperty(property)) throw new InvalidOperationException("Unsupported Mochie property layout: " + property);
             return material.GetFloat(workflow) == 0 && Maps(detail).Any(p => material.GetTexture(p) != null);
+        }
+
+        private static bool CleanupEligible(Material material, bool detail, List<string> notes)
+        {
+            if (material.GetFloat(detail ? "_DetailWorkflow" : "_PrimaryWorkflow") != 1 || !Maps(detail).Any(p => material.GetTexture(p) != null)) return false;
+            try { RequirePacked(material, detail); return true; }
+            catch (InvalidOperationException ex) { notes.Add(material.name + ": " + ex.Message); return false; }
+        }
+
+        private static void RequirePacked(Material material, bool detail)
+        {
+            string property = detail ? "_DetailPackedMap" : "_PackedMap";
+            if (material.GetFloat(detail ? "_DetailWorkflow" : "_PrimaryWorkflow") != 1 ||
+                !material.IsKeywordEnabled(detail ? "_WORKFLOW_DETAIL_PACKED_ON" : "_WORKFLOW_PACKED_ON") ||
+                !(material.GetTexture(property) is Texture2D texture) || string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
+                throw new InvalidOperationException(property + ": cleanup requires an assigned texture asset and an enabled packed workflow/keyword; references retained.");
+        }
+
+        private static int ClearSources(Material material, bool detail)
+        {
+            RequirePacked(material, detail);
+            int count = 0;
+            foreach (string property in Maps(detail))
+            {
+                if (material.GetTexture(property) == null) continue;
+                material.SetTexture(property, null);
+                count++;
+            }
+            return count;
         }
 
         internal static Result Apply(Preview preview, Adapter adapter, Func<string, bool> cancel = null)
@@ -124,8 +166,16 @@ namespace Lightbulb.WorldTools
                     {
                         if (entry.Primary) adapter.Pack(entry.Material, false, outputs, result);
                         if (entry.Detail) adapter.Pack(entry.Material, true, outputs, result);
+                        // Both packing operations must succeed before discarding their material references.
+                        // Configure has already captured height presence and absent detail-channel strengths.
+                        // Existing packed workflows only lose references: never reconfigure their channels,
+                        // strengths, UVs, keywords or AreaLit settings from the leftover source maps.
+                        int cleared = 0;
+                        if (entry.Primary || entry.CleanupPrimary) cleared += ClearSources(entry.Material, false);
+                        if (entry.Detail || entry.CleanupDetail) cleared += ClearSources(entry.Material, true);
                         EditorUtility.SetDirty(entry.Material);
                         result.Changed++;
+                        result.ClearedReferences += cleared;
                     }
                     catch (Exception ex)
                     {

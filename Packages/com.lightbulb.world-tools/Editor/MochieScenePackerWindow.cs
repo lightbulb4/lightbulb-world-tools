@@ -31,6 +31,8 @@ namespace Lightbulb.WorldTools
             EditorGUILayout.LabelField("Pack Mochie Materials in Scene", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Uses Mochie Standard v2.13's installed texture packer. Scans materials assigned to the active scene, " +
                 "including inactive objects. Supports Standard and Standard Lite primary maps, and Standard detail maps.", MessageType.Info);
+            EditorGUILayout.HelpBox("Successful packing clears the separate data-map references. Already-packed materials with leftover references " +
+                "are included for cleanup without repacking. Texture files are kept; Undo restores the references.", MessageType.Info);
             EditorGUILayout.HelpBox("Matching packing inputs share one new PNG per batch, saved beside the first matching material. AreaLit settings stay independent. " +
                 "Shared material assets also change wherever else they are used. " +
                 "Undo restores material settings; generated PNGs remain on disk. Review the scene before saving.", MessageType.Warning);
@@ -60,8 +62,10 @@ namespace Lightbulb.WorldTools
                                     entry.Included = EditorGUILayout.Toggle(entry.Included, GUILayout.Width(18));
                                     EditorGUILayout.ObjectField(entry.Material, typeof(Material), false);
                                 }
-                                EditorGUILayout.LabelField((entry.Primary ? "Primary: AO / roughness / metallic / height" : "") +
-                                    (entry.Primary && entry.Detail ? "\n" : "") + (entry.Detail ? "Detail: AO / roughness / metallic" : ""), EditorStyles.wordWrappedMiniLabel);
+                                if (entry.Primary) EditorGUILayout.LabelField("Pack primary: AO / roughness / metallic / height", EditorStyles.wordWrappedMiniLabel);
+                                if (entry.Detail) EditorGUILayout.LabelField("Pack detail: AO / roughness / metallic", EditorStyles.wordWrappedMiniLabel);
+                                if (entry.CleanupPrimary) EditorGUILayout.LabelField("Clear leftover primary references (already packed)", EditorStyles.wordWrappedMiniLabel);
+                                if (entry.CleanupDetail) EditorGUILayout.LabelField("Clear leftover detail references (already packed)", EditorStyles.wordWrappedMiniLabel);
                                 EditorGUILayout.LabelField(AssetDatabase.GetAssetPath(entry.Material), EditorStyles.wordWrappedMiniLabel);
                             }
                         notes = EditorGUILayout.Foldout(notes, $"Skipped / scan notes ({preview.Notes.Count})", true);
@@ -69,7 +73,7 @@ namespace Lightbulb.WorldTools
                     }
                     int count = preview.Entries.Count(e => e.Included);
                     using (new EditorGUI.DisabledScope(count == 0))
-                        if (GUILayout.Button($"Pack selected materials ({count})")) Apply();
+                        if (GUILayout.Button($"Pack / clean selected materials ({count})")) Apply();
                 }
                 if (!string.IsNullOrEmpty(message)) EditorGUILayout.HelpBox(message, MessageType.Info);
             }
@@ -87,14 +91,16 @@ namespace Lightbulb.WorldTools
             try { SceneMaterials.RequireActive(preview.Scene); }
             catch (Exception ex) { message = ex.Message; return; }
             if (!EditorUtility.DisplayDialog("Pack Mochie Scene Materials",
-                $"Pack {preview.Entries.Count(e => e.Included)} selected material(s) in '{preview.Scene.name}'?\n\n" +
+                $"Pack or clean {preview.Entries.Count(e => e.Included)} selected material(s) in '{preview.Scene.name}'?\n\n" +
                 "Matching inputs share one new PNG, saved beside the first matching material. Shared materials change in their other uses too. " +
-                "Source maps are retained. Undo restores material settings but keeps generated PNGs. Review before saving.", "Pack materials", "Cancel")) return;
+                "Separate data-map references are cleared after successful packing, or from valid already-packed workflows. " +
+                "Texture files are retained. Undo restores material settings and references but keeps generated PNGs. Review before saving.", "Pack / clean", "Cancel")) return;
             try
             {
                 var result = MochieScenePacker.Apply(preview, adapter, name => EditorUtility.DisplayCancelableProgressBar("Packing Mochie materials", name, 0.5f));
-                message = $"{result.Changed} materials packed; {result.Outputs.Count} PNGs created; {result.Reused} packs reused; {result.Errors.Count} failed." +
-                    (result.Cancelled ? " Cancelled; completed materials stay packed." : "") + " Review the scene, then save. Undo restores material settings.";
+                message = $"{result.Changed} materials updated; {result.Outputs.Count} PNGs created; {result.Reused} packs reused; " +
+                    $"{result.ClearedReferences} source references cleared; {result.Errors.Count} failed." +
+                    (result.Cancelled ? " Cancelled; completed changes are retained." : "") + " Review the scene, then save. Undo restores material settings and references.";
                 Debug.Log("[Lightbulb] " + message + "\nGenerated textures:\n" + string.Join("\n", result.Outputs));
                 foreach (string error in result.Errors) Debug.LogError("[Lightbulb] " + error + " (material restored; any generated PNGs remain)");
                 preview = null;

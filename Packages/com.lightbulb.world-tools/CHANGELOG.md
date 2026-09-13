@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9 - 2026-09-12
+
+- **Pack Mochie Materials in Scene** now clears separate primary/detail data-map references after successful packing, including reused packed outputs. Source texture files remain on disk; Undo restores the original references and settings.
+- The same scan now offers cleanup of leftover references on already-packed scene materials without repacking. Preview distinguishes packing from cleanup. Missing packed textures or inactive packed keywords retain source references and report a note.
+- Preserves packed height, detail strengths, normal/mask/albedo maps, and independent AreaLit settings. Cleanup validates the existing packed texture against preview changes and restores the material if any operation fails.
+
 ## 0.1.8 - 2026-09-12
 
 - Added **Lighting Experiment**: keep paired Bakery and Light Volumes configurations in one scene, switch Bakery / Point LVs only / Hybrid, and control individual light participation without reconverting or discarding independent edits.
