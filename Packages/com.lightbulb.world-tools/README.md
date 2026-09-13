@@ -21,6 +21,23 @@ Multi-select materials in the **Project** window, then right-click **Materials >
 
 Crunch targets disk/download size rather than GPU memory. Reducing resolution also reduces GPU memory usage. No textures are changed merely by installing the package or opening the preview.
 
+### Find Empty Material Maps
+
+Open **Tools > Lightbulb > Find Empty Material Maps**, then **Scan project materials** outside Play Mode.
+
+- Finds assigned metallic, roughness/smoothness/gloss, ambient occlusion, normal/bump, height/parallax/displacement, and common packed data maps. Identification uses shader property names and Inspector descriptions, including saved properties from previous shaders. Custom slots with unrelated names/descriptions are not recognized.
+- Scans material assets across the project, including materials used only by other scenes, prefabs, or animations. Package, embedded, and loaded transient material references are included in the report. Unreferenced texture files are not scanned.
+- **Exact matching** requires every pixel to have the same RGBA value. **Fuzzy matching** defaults to **99% identical pixels**, adjustable from 90–100%. The percentage measures pixels with exactly the same value, not a color-distance tolerance. Compression artifacts may reduce the match percentage.
+- Reads every pixel of the current imported mip-zero image on the GPU in bounded strips, without enabling Read/Write or changing import settings. This checks the current platform's imported resolution/compression, not the original source at a higher resolution. All four channels are checked together: useful alpha or packed-channel detail prevents an exact match. Normal maps are compared in their GPU channel packing, not displayed as decoded normal vectors. A supported graphics device is required; unavailable full-resolution streaming mips and unsupported texture types are reported as skipped.
+- Each result shows the texture, dimensions, constant sampled RGBA value, matching pixel count/percentage, and every material/property reference. **Filter results**, **Select all removable**, and **Select none** help review candidates. The filter does not change bulk selection.
+- **Remove** clears one texture from all its referenced material slots. **Remove all selected** does the same for the selected textures. This includes non-data slots (such as albedo) sharing that texture and unused saved texture properties. Shader source files and texture files are never deleted or modified.
+- All references must belong to editable standalone `.mat` assets under `Assets`. Read-only, package, embedded, or transient references block removal of that texture; extract/copy the material into `Assets` and update its references first. The tool rechecks texture changes, references, and editability before changing any material.
+- Changes form one **Edit > Undo** operation and are not automatically saved. Review the scene, then save the project. Texture scale/offset and scalar values remain unchanged. Unity's normal material validation may update shader keywords (for example, Standard disables its metallic-map keyword).
+
+**Constant does not mean visually irrelevant.** A solid black metallic map, white roughness map, or even a uniform non-neutral normal can affect appearance. Removing it uses that shader's unassigned-map behavior; the tool does not translate constants into shader-specific sliders or implement custom shader keyword rules. Fuzzy removal deliberately discards the nonmatching pixels. Review before saving and use Undo if needed.
+
+Clearing material references can reduce build texture usage, but remaining references from scripts, other assets, Resources, or other build inclusion rules can keep a texture in a build. This tool does not promise a byte-size reduction or remove those other references.
+
 ### Find GPU Instancing Candidates
 
 Finds repeated single-material `MeshRenderer` combinations whose material does not have GPU instancing enabled. It groups renderers by the state that must match for an instanced draw and reports active, enabled objects that are not marked for static batching.

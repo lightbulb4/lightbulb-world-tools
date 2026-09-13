@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5 - 2026-09-12
+
+- Added **Find Empty Material Maps** under **Tools > Lightbulb** to find uniform metallic, roughness/smoothness, AO, normal, height, and packed data maps across project materials.
+- Full-resolution, all-channel scanning supports exact matching or a configurable fuzzy threshold (99% by default), without changing texture files or import settings.
+- Preview every shared material reference, filter/select results, and remove one texture or all selected textures from material slots without deleting files. Removal supports Undo, checks for stale previews, and refuses partial removal when a referenced material cannot be edited.
+
 ## 0.1.4 - 2026-09-11
 
 - Added **Resize Referenced Textures** to the material right-click menu and **Tools > Lightbulb**. Multi-select materials, preview and exclude textures, cap resolution, and optionally enable or disable Crunch.
