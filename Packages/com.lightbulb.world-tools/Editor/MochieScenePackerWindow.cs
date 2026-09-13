@@ -42,7 +42,6 @@ namespace Lightbulb.WorldTools
                 includeDetail = EditorGUILayout.Toggle("Include Standard detail maps", includeDetail);
                 if (EditorGUI.EndChangeCheck()) preview = null;
                 if (GUILayout.Button("Scan active scene")) Scan();
-                if (GUILayout.Button("Find existing duplicate packed maps...")) MochiePackedMapDuplicatesWindow.Open();
                 if (preview != null)
                 {
                     EditorGUILayout.LabelField($"{preview.Scene.name} | {preview.Entries.Count} eligible materials | {preview.Notes.Count} notes");

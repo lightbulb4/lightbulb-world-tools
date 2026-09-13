@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10 - 2026-09-13
+
+- Removed the one-off **Consolidate Mochie Packed Maps in Scene** tool and its shortcut in the packer. Automatic sharing of matching outputs within each packing batch and cleanup of obsolete source references remain available.
+- **Lighting Experiment** remains included and unchanged.
+
 ## 0.1.9 - 2026-09-12
 
 - **Pack Mochie Materials in Scene** now clears separate primary/detail data-map references after successful packing, including reused packed outputs. Source texture files remain on disk; Undo restores the original references and settings.
