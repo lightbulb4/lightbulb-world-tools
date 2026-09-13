@@ -53,7 +53,7 @@ namespace Lightbulb.WorldTools.Tests
             var image = new Texture2D(16, 16, TextureFormat.RGB24, false, true);
             image.SetPixels(Enumerable.Repeat(new Color(0.4f, 0.4f, 0.4f), 256).ToArray());
             image.Apply();
-            string path = root + "/source.png";
+            string path = AssetDatabase.GenerateUniqueAssetPath(root + "/source.png");
             File.WriteAllBytes(path, image.EncodeToPNG());
             Object.DestroyImmediate(image);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
@@ -67,7 +67,7 @@ namespace Lightbulb.WorldTools.Tests
         private Material Material(string shaderName = "Mochie/Standard")
         {
             var material = new Material(Shader.Find(shaderName));
-            AssetDatabase.CreateAsset(material, root + "/material.mat");
+            AssetDatabase.CreateAsset(material, AssetDatabase.GenerateUniqueAssetPath(root + "/material.mat"));
             new GameObject("Renderer").AddComponent<MeshRenderer>().sharedMaterial = material;
             return material;
         }
@@ -153,6 +153,237 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(MochieScenePacker.Apply(preview, adapter, _ => true).Cancelled, Is.True);
             Assert.That(material.GetFloat("_PrimaryWorkflow"), Is.Zero);
             Assert.That(Directory.GetFiles(root, "*.png").Length, Is.EqualTo(1));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void MatchingInputsShareOneOutputAndPreserveIndependentAreaLitAndRuntimeStrengths(bool detail)
+        {
+            Material a = Material();
+            Material b = Material(detail ? "Mochie/Standard" : "Mochie/Standard Lite");
+            string prefix = detail ? "_Detail" : "_";
+            Texture2D source = Texture();
+            foreach (Material material in new[] { a, b })
+            {
+                material.SetTexture(prefix + "RoughnessMap", source);
+                material.SetTextureScale(prefix + "PackedMap", new Vector2(3, 4));
+                material.SetTextureOffset(prefix + "PackedMap", new Vector2(0.2f, 0.3f));
+            }
+            a.SetTextureOffset("_AreaLitOcclusion", new Vector2(0.1f, 0.2f));
+            b.SetTextureOffset("_AreaLitOcclusion", new Vector2(0.7f, 0.8f));
+            a.SetTextureScale("_AreaLitOcclusion", new Vector2(0.25f, 0.25f));
+            b.SetTextureScale("_AreaLitOcclusion", new Vector2(0.5f, 0.5f));
+            string strength = detail ? "_DetailRoughnessStrength" : "_HeightStrength";
+            a.SetFloat(strength, 0.1f);
+            b.SetFloat(strength, 0.8f);
+            string beforeA = EditorJsonUtility.ToJson(a);
+            string beforeB = EditorJsonUtility.ToJson(b);
+            var result = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, true), new MochieScenePacker.Adapter());
+            Assert.That(result.Errors, Is.Empty);
+            Assert.That(result.Changed, Is.EqualTo(2));
+            Assert.That(result.Outputs.Count, Is.EqualTo(1));
+            Assert.That(result.Reused, Is.EqualTo(1));
+            Assert.That(a.GetTexture(prefix + "PackedMap"), Is.SameAs(b.GetTexture(prefix + "PackedMap")));
+            Assert.That(b.GetTextureScale(prefix + "PackedMap"), Is.EqualTo(Vector2.one));
+            Assert.That(b.GetTextureOffset(prefix + "PackedMap"), Is.EqualTo(Vector2.zero));
+            Assert.That(a.GetTextureOffset("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.1f, 0.2f)));
+            Assert.That(b.GetTextureOffset("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.7f, 0.8f)));
+            Assert.That(b.GetTextureScale("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.5f, 0.5f)));
+            Assert.That(a.GetFloat(strength), Is.EqualTo(0.1f));
+            Assert.That(b.GetFloat(strength), Is.EqualTo(0.8f));
+            Assert.That(b.IsKeywordEnabled(detail ? "_WORKFLOW_DETAIL_PACKED_ON" : "_WORKFLOW_PACKED_ON"), Is.True);
+            Undo.PerformUndo();
+            Assert.That(EditorJsonUtility.ToJson(a), Is.EqualTo(beforeA));
+            Assert.That(EditorJsonUtility.ToJson(b), Is.EqualTo(beforeB));
+            Assert.That(File.Exists(result.Outputs.Single()), Is.True);
+        }
+
+        [TestCase("strength")]
+        [TestCase("offset")]
+        [TestCase("scale")]
+        [TestCase("source")]
+        [TestCase("height")]
+        public void DifferentPackingInputsProduceSeparateOutputs(string difference)
+        {
+            Material a = Material();
+            Material b = Material();
+            var source = Texture();
+            a.SetTexture("_RoughnessMap", source);
+            b.SetTexture("_RoughnessMap", source);
+            if (difference == "strength") b.SetFloat("_RoughnessStrength", 0.37f);
+            if (difference == "offset") b.SetTextureOffset("_RoughnessMap", new Vector2(0.2f, 0.3f));
+            if (difference == "scale") b.SetTextureScale("_RoughnessMap", new Vector2(2, 3));
+            if (difference == "source") b.SetTexture("_RoughnessMap", Texture());
+            if (difference == "height") b.SetTexture("_HeightMap", source);
+            var result = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, true), new MochieScenePacker.Adapter());
+            Assert.That(result.Errors, Is.Empty);
+            Assert.That(result.Outputs.Count, Is.EqualTo(2));
+            Assert.That(result.Reused, Is.Zero);
+            Assert.That(a.GetTexture("_PackedMap"), Is.Not.EqualTo(b.GetTexture("_PackedMap")));
+        }
+
+        private Texture2D CopyTexture(Texture2D source)
+        {
+            string path = AssetDatabase.GenerateUniqueAssetPath(root + "/z_copy.png");
+            Assert.That(AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(source), path), Is.True);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        private Material Packed(Texture2D texture, bool detail = false)
+        {
+            Material material = Material();
+            material.SetTexture(detail ? "_DetailPackedMap" : "_PackedMap", texture);
+            material.SetFloat(detail ? "_DetailWorkflow" : "_PrimaryWorkflow", 1);
+            return material;
+        }
+
+        [Test]
+        public void ConsolidationOnlyChangesScenePackedReferencesAndUndoRestoresThem()
+        {
+            Texture2D first = Texture();
+            Texture2D copy = CopyTexture(first);
+            Material a = Packed(first);
+            Material b = Packed(copy, true);
+            b.SetTextureOffset("_AreaLitOcclusion", new Vector2(0.7f, 0.8f));
+            b.SetTextureOffset("_DetailPackedMap", new Vector2(0.4f, 0.5f));
+            b.SetTextureScale("_DetailPackedMap", new Vector2(2, 3));
+            b.SetFloat("_DetailRoughnessStrength", 0.37f);
+            // A separate-workflow reference must stay untouched even when its texture matches.
+            Material separate = Material();
+            separate.SetTexture("_PackedMap", copy);
+            var outside = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            SceneManager.SetActiveScene(outside);
+            Material outsideMaterial = Packed(copy);
+            SceneManager.SetActiveScene(scene);
+            try
+            {
+                string stateA = EditorJsonUtility.ToJson(a);
+                string stateB = EditorJsonUtility.ToJson(b);
+                string stateSeparate = EditorJsonUtility.ToJson(separate);
+                string stateOutside = EditorJsonUtility.ToJson(outsideMaterial);
+                var preview = MochiePackedMapDuplicates.Collect(scene);
+                Assert.That(preview.Notes, Is.Empty, string.Join("\n", preview.Notes));
+                Assert.That(preview.Groups.Count, Is.EqualTo(1));
+                Texture2D keep = preview.Groups.Single().Keep;
+                Assert.That(AssetDatabase.GetAssetPath(keep), Is.EqualTo(new[] { first, copy }.Select(AssetDatabase.GetAssetPath).OrderBy(p => p, StringComparer.Ordinal).First()));
+                Assert.That(MochiePackedMapDuplicates.Apply(preview), Is.EqualTo(1));
+                Assert.That(a.GetTexture("_PackedMap"), Is.SameAs(b.GetTexture("_DetailPackedMap")));
+                Assert.That(b.GetTextureOffset("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.7f, 0.8f)));
+                Assert.That(b.GetTextureOffset("_DetailPackedMap"), Is.EqualTo(new Vector2(0.4f, 0.5f)));
+                Assert.That(b.GetTextureScale("_DetailPackedMap"), Is.EqualTo(new Vector2(2, 3)));
+                Assert.That(b.GetFloat("_DetailRoughnessStrength"), Is.EqualTo(0.37f));
+                Assert.That(EditorJsonUtility.ToJson(separate), Is.EqualTo(stateSeparate));
+                Assert.That(EditorJsonUtility.ToJson(outsideMaterial), Is.EqualTo(stateOutside));
+                Assert.That(MochiePackedMapDuplicates.Collect(scene).Groups, Is.Empty);
+                Undo.PerformUndo();
+                Assert.That(EditorJsonUtility.ToJson(a), Is.EqualTo(stateA));
+                Assert.That(EditorJsonUtility.ToJson(b), Is.EqualTo(stateB));
+                Assert.That(File.Exists(AssetDatabase.GetAssetPath(first)) && File.Exists(AssetDatabase.GetAssetPath(copy)), Is.True);
+            }
+            finally { EditorSceneManager.CloseScene(outside, true); }
+        }
+
+        [TestCase("srgb")]
+        [TestCase("filter")]
+        [TestCase("wrap")]
+        [TestCase("mipmaps")]
+        [TestCase("size")]
+        [TestCase("compression")]
+        [TestCase("platform")]
+        public void ConsolidationRefusesDifferentImportSettings(string difference)
+        {
+            Texture2D first = Texture();
+            Texture2D copy = CopyTexture(first);
+            Packed(first);
+            Packed(copy);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(copy));
+            if (difference == "srgb") importer.sRGBTexture = true;
+            if (difference == "filter") importer.filterMode = FilterMode.Point;
+            if (difference == "wrap") importer.wrapMode = TextureWrapMode.Clamp;
+            if (difference == "mipmaps") importer.mipmapEnabled = !importer.mipmapEnabled;
+            if (difference == "size") importer.maxTextureSize = 32;
+            if (difference == "compression") importer.textureCompression = TextureImporterCompression.Compressed;
+            if (difference == "platform")
+            {
+                var settings = importer.GetPlatformTextureSettings("Android");
+                settings.overridden = true;
+                settings.maxTextureSize = 32;
+                importer.SetPlatformTextureSettings(settings);
+            }
+            importer.SaveAndReimport();
+            Assert.That(MochiePackedMapDuplicates.Collect(scene).Groups, Is.Empty);
+        }
+
+        [TestCase("material")]
+        [TestCase("texture")]
+        [TestCase("scene")]
+        public void ConsolidationStalePreviewRefusesBeforeChangingAnyReferences(string change)
+        {
+            Texture2D first = Texture();
+            Texture2D copy = CopyTexture(first);
+            Material a = Packed(first);
+            Material b = Packed(copy);
+            var preview = MochiePackedMapDuplicates.Collect(scene);
+            Assert.That(preview.Groups.Count, Is.EqualTo(1));
+            if (change == "material") preview.Groups.Single().Replacements[0].Material.SetFloat("_AreaLitOcclusionUVSet", 2);
+            if (change == "texture")
+            {
+                var importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(copy));
+                importer.filterMode = FilterMode.Point;
+                importer.SaveAndReimport();
+            }
+            if (change == "scene") SceneManager.SetActiveScene(previous);
+            Assert.Throws<InvalidOperationException>(() => MochiePackedMapDuplicates.Apply(preview));
+            Assert.That(a.GetTexture("_PackedMap"), Is.EqualTo(first));
+            Assert.That(b.GetTexture("_PackedMap"), Is.EqualTo(copy));
+            SceneManager.SetActiveScene(scene);
+        }
+
+        [Test]
+        public void DifferentPixelsAreNotConsolidatedAndExcludedGroupsAreUntouched()
+        {
+            Texture2D first = Texture();
+            Texture2D copy = CopyTexture(first);
+            Material a = Packed(first);
+            Material b = Packed(copy);
+            var preview = MochiePackedMapDuplicates.Collect(scene);
+            preview.Groups.Single().Included = false;
+            Assert.That(MochiePackedMapDuplicates.Apply(preview), Is.Zero);
+            Assert.That(a.GetTexture("_PackedMap"), Is.EqualTo(first));
+            Assert.That(b.GetTexture("_PackedMap"), Is.EqualTo(copy));
+            var image = new Texture2D(16, 16, TextureFormat.RGB24, false, true);
+            image.SetPixels(Enumerable.Repeat(new Color(0.4f, 0.4f, 0.4f), 256).ToArray());
+            image.SetPixel(0, 0, Color.black);
+            image.Apply();
+            File.WriteAllBytes(AssetDatabase.GetAssetPath(copy), image.EncodeToPNG());
+            Object.DestroyImmediate(image);
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(copy), ImportAssetOptions.ForceSynchronousImport);
+            Assert.That(MochiePackedMapDuplicates.Collect(scene).Groups, Is.Empty, "One differing pixel must prevent consolidation.");
+            Assert.Throws<OperationCanceledException>(() => MochiePackedMapDuplicates.Collect(scene, _ => true));
+        }
+
+        [Test]
+        public void ConsolidationRepairsDuplicatesFromSeparateNativePackingRuns()
+        {
+            Texture2D source = Texture();
+            Material a = Material();
+            a.SetTexture("_MetallicMap", source);
+            var adapter = new MochieScenePacker.Adapter();
+            var first = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, false), adapter);
+            Assert.That(first.Errors, Is.Empty);
+            Material b = Material();
+            b.SetTexture("_MetallicMap", source);
+            b.SetTextureOffset("_AreaLitOcclusion", new Vector2(0.7f, 0.8f));
+            var second = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, false), adapter);
+            Assert.That(second.Errors, Is.Empty);
+            Assert.That(a.GetTexture("_PackedMap"), Is.Not.EqualTo(b.GetTexture("_PackedMap")));
+            var preview = MochiePackedMapDuplicates.Collect(scene);
+            Assert.That(preview.Groups.Count, Is.EqualTo(1));
+            Assert.That(MochiePackedMapDuplicates.Apply(preview), Is.EqualTo(1));
+            Assert.That(a.GetTexture("_PackedMap"), Is.EqualTo(b.GetTexture("_PackedMap")));
+            Assert.That(b.GetTextureOffset("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.7f, 0.8f)));
+            foreach (string path in first.Outputs.Concat(second.Outputs)) Assert.That(File.Exists(path), Is.True);
         }
     }
 }

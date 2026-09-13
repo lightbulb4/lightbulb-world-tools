@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7 - 2026-09-12
+
+- Scene packing now creates one PNG per unique set of native packing inputs per batch and shares it across matching materials. Material identities and independent AreaLit occlusion settings are preserved. Source identities/import hashes, effective tiling/offset, baked strengths, map presence, and primary/detail mode determine sharing.
+- Added **Consolidate Mochie Packed Maps in Scene** to replace duplicate packed-map references with a shared texture. Requires byte-identical PNG files and identical texture importer settings, including all platform overrides; uses a stable keeper path, selectable preview groups, stale-preview checks, and Undo. Material settings and all texture files are retained.
+
 ## 0.1.6 - 2026-09-12
 
 - **Find Empty Material Maps** now scans only materials assigned to renderers, terrains, and skyboxes in the active scene, including inactive objects. Removal is limited to those materials, and switching scenes requires a new scan. Shared material assets still affect their other uses.

@@ -32,6 +32,7 @@ namespace Lightbulb.WorldTools
         internal sealed class Result
         {
             internal int Changed;
+            internal int Reused;
             internal bool Cancelled;
             internal readonly List<string> Outputs = new List<string>();
             internal readonly List<string> Errors = new List<string>();
@@ -106,6 +107,8 @@ namespace Lightbulb.WorldTools
                         throw new InvalidOperationException("Source texture changed; scan again: " + source.Key);
             }
             var result = new Result();
+            // Only completed packs are shared, and only for this operation. No persistent cache to become stale.
+            var outputs = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
             if (selected.Count == 0) return result;
             Undo.IncrementCurrentGroup();
             int group = Undo.GetCurrentGroup();
@@ -119,8 +122,8 @@ namespace Lightbulb.WorldTools
                     SceneMaterials.RequireActive(preview.Scene);
                     try
                     {
-                        if (entry.Primary) result.Outputs.Add(adapter.Pack(entry.Material, false));
-                        if (entry.Detail) result.Outputs.Add(adapter.Pack(entry.Material, true));
+                        if (entry.Primary) adapter.Pack(entry.Material, false, outputs, result);
+                        if (entry.Detail) adapter.Pack(entry.Material, true, outputs, result);
                         EditorUtility.SetDirty(entry.Material);
                         result.Changed++;
                     }
@@ -142,6 +145,7 @@ namespace Lightbulb.WorldTools
             private readonly MethodInfo pack;
             private readonly MethodInfo keywords;
             private readonly MethodInfo blend;
+            private readonly MethodInfo scaleAndOffset;
             private readonly object editor;
 
             internal Adapter()
@@ -158,7 +162,9 @@ namespace Lightbulb.WorldTools
                 pack = packer.GetMethod("PackTextures", BindingFlags.Public | BindingFlags.Static, null, signature.ToArray(), null);
                 keywords = editorType.GetMethod("SetKeywords", BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(Material) }, null);
                 blend = editorType.GetMethod("SetBlendMode", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Material) }, null);
-                if (pack == null || pack.ReturnType != typeof(Texture2D) || keywords == null || blend == null)
+                scaleAndOffset = packer.GetMethod("GetTextureScaleAndOffset", BindingFlags.Public | BindingFlags.Static, null,
+                    new[] { typeof(Material), typeof(MaterialProperty), typeof(string) }, null);
+                if (pack == null || pack.ReturnType != typeof(Texture2D) || keywords == null || blend == null || scaleAndOffset == null || scaleAndOffset.ReturnType != typeof(Vector4))
                     throw new InvalidOperationException("The installed Mochie packing API is incompatible. No materials changed.");
                 Shader shader = Shader.Find("Hidden/Mochie/TexturePacker");
                 if (shader == null || !shader.isSupported || ShaderUtil.ShaderHasError(shader))
@@ -172,32 +178,87 @@ namespace Lightbulb.WorldTools
                 return types[0];
             }
 
-            internal string Pack(Material material, bool detail)
+            private sealed class Request
+            {
+                internal object[] Arguments;
+                internal string Key;
+            }
+
+            private Request BuildRequest(Material material, bool detail)
             {
                 if (!Eligible(material, detail)) throw new InvalidOperationException("Material is no longer eligible for packing.");
                 var properties = MaterialEditor.GetMaterialProperties(new Object[] { material }).ToDictionary(p => p.name);
                 string prefix = detail ? "_Detail" : "_";
                 var arguments = new List<object> { material };
-                foreach (string channel in new[] { "Occlusion", "Roughness", "Metallic", "Height" })
+                // Encode exact native inputs, not the whole material. In particular, AreaLit settings,
+                // runtime height/detail strengths, and material names do not change the baked pixels.
+                using (var bytes = new MemoryStream())
+                using (var key = new BinaryWriter(bytes))
                 {
-                    if (detail && channel == "Height") { arguments.Add(null); arguments.Add(1f); continue; }
-                    arguments.Add(properties[prefix + channel + "Map"]);
-                    // Height and detail strengths are still applied by the packed shader at runtime.
-                    // Passing 1 keeps them from being baked and then applied a second time.
-                    arguments.Add(detail || channel == "Height" ? 1f : properties[prefix + channel + "Strength"].floatValue);
+                    key.Write(detail);
+                    foreach (string channel in new[] { "Occlusion", "Roughness", "Metallic", "Height" })
+                    {
+                        if (detail && channel == "Height") { arguments.Add(null); arguments.Add(1f); continue; }
+                        var property = properties[prefix + channel + "Map"];
+                        arguments.Add(property);
+                        // Height and detail strengths are still applied by the packed shader at runtime.
+                        // Passing 1 keeps them from being baked and then applied a second time.
+                        float strength = detail || channel == "Height" ? 1f : properties[prefix + channel + "Strength"].floatValue;
+                        arguments.Add(strength);
+                        key.Write(strength);
+                        Vector4 st = (Vector4)scaleAndOffset.Invoke(null, new object[] { material, property, property.name });
+                        for (int i = 0; i < 4; i++) key.Write(st[i]);
+                        Texture texture = property.textureValue;
+                        key.Write(texture != null);
+                        if (texture != null)
+                        {
+                            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string guid, out long localId))
+                                throw new InvalidOperationException("Source texture has no stable asset identity.");
+                            key.Write(guid);
+                            key.Write(localId);
+                            key.Write(AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(texture)).ToString());
+                        }
+                    }
+                    arguments.Add(properties[prefix + "PackedMap"]);
+                    key.Flush();
+                    return new Request { Arguments = arguments.ToArray(), Key = Convert.ToBase64String(bytes.ToArray()) };
                 }
-                string packedProperty = prefix + "PackedMap";
-                arguments.Add(properties[packedProperty]);
+            }
+
+            internal void Pack(Material material, bool detail, Dictionary<string, Texture2D> outputs, Result result)
+            {
+                Request request = BuildRequest(material, detail);
+                if (outputs.TryGetValue(request.Key, out Texture2D shared))
+                {
+                    Configure(material, detail, shared);
+                    result.Reused++;
+                    return;
+                }
                 RenderTexture previous = RenderTexture.active;
                 bool srgb = GL.sRGBWrite;
                 Texture2D output;
-                try { GL.sRGBWrite = false; output = (Texture2D)pack.Invoke(null, arguments.ToArray()); }
+                try { GL.sRGBWrite = false; output = (Texture2D)pack.Invoke(null, request.Arguments); }
                 finally { RenderTexture.active = previous; GL.sRGBWrite = srgb; }
+                string packedProperty = detail ? "_DetailPackedMap" : "_PackedMap";
+                if (output == null || material.GetTexture(packedProperty) != output)
+                    throw new InvalidOperationException("Mochie did not assign the packed texture.");
+                Configure(material, detail, output);
+                outputs.Add(request.Key, output);
+                result.Outputs.Add(AssetDatabase.GetAssetPath(output));
+            }
+
+            private void Configure(Material material, bool detail, Texture2D output)
+            {
+                string prefix = detail ? "_Detail" : "_";
+                string packedProperty = prefix + "PackedMap";
                 string path = output != null ? AssetDatabase.GetAssetPath(output) : "";
-                if (output == null || material.GetTexture(packedProperty) != output || !path.StartsWith("Assets/", StringComparison.Ordinal) || !File.Exists(path))
+                if (output == null || !path.StartsWith("Assets/", StringComparison.Ordinal) || !File.Exists(path))
                     throw new InvalidOperationException("Mochie did not return and assign a saved packed texture.");
                 var importer = AssetImporter.GetAtPath(path) as TextureImporter;
                 if (importer == null || importer.sRGBTexture) throw new InvalidOperationException("Packed texture was not imported as linear: " + path);
+                material.SetTexture(packedProperty, output);
+                material.SetTextureScale(packedProperty, Vector2.one);
+                material.SetTextureOffset(packedProperty, Vector2.zero);
                 material.SetFloat(detail ? "_DetailWorkflow" : "_PrimaryWorkflow", 1);
                 material.SetFloat(prefix + "OcclusionChannel", 0);
                 material.SetFloat(prefix + "RoughnessChannel", 1);
@@ -220,7 +281,6 @@ namespace Lightbulb.WorldTools
                 blend.Invoke(null, new object[] { material });
                 if (!material.IsKeywordEnabled(detail ? "_WORKFLOW_DETAIL_PACKED_ON" : "_WORKFLOW_PACKED_ON"))
                     throw new InvalidOperationException("Mochie did not enable the packed-workflow keyword.");
-                return path;
             }
         }
     }

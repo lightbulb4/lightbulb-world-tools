@@ -31,7 +31,8 @@ namespace Lightbulb.WorldTools
             EditorGUILayout.LabelField("Pack Mochie Materials in Scene", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Uses Mochie Standard v2.13's installed texture packer. Scans materials assigned to the active scene, " +
                 "including inactive objects. Supports Standard and Standard Lite primary maps, and Standard detail maps.", MessageType.Info);
-            EditorGUILayout.HelpBox("Shared material assets also change wherever else they are used. Packing creates new PNGs beside each material. " +
+            EditorGUILayout.HelpBox("Matching packing inputs share one new PNG per batch, saved beside the first matching material. AreaLit settings stay independent. " +
+                "Shared material assets also change wherever else they are used. " +
                 "Undo restores material settings; generated PNGs remain on disk. Review the scene before saving.", MessageType.Warning);
             using (new EditorGUI.DisabledScope(!MaterialTextureBatch.IsIdle))
             {
@@ -39,6 +40,7 @@ namespace Lightbulb.WorldTools
                 includeDetail = EditorGUILayout.Toggle("Include Standard detail maps", includeDetail);
                 if (EditorGUI.EndChangeCheck()) preview = null;
                 if (GUILayout.Button("Scan active scene")) Scan();
+                if (GUILayout.Button("Find existing duplicate packed maps...")) MochiePackedMapDuplicatesWindow.Open();
                 if (preview != null)
                 {
                     EditorGUILayout.LabelField($"{preview.Scene.name} | {preview.Entries.Count} eligible materials | {preview.Notes.Count} notes");
@@ -86,12 +88,12 @@ namespace Lightbulb.WorldTools
             catch (Exception ex) { message = ex.Message; return; }
             if (!EditorUtility.DisplayDialog("Pack Mochie Scene Materials",
                 $"Pack {preview.Entries.Count(e => e.Included)} selected material(s) in '{preview.Scene.name}'?\n\n" +
-                "New uniquely named PNGs are saved beside the materials. Shared materials change in their other uses too. " +
+                "Matching inputs share one new PNG, saved beside the first matching material. Shared materials change in their other uses too. " +
                 "Source maps are retained. Undo restores material settings but keeps generated PNGs. Review before saving.", "Pack materials", "Cancel")) return;
             try
             {
                 var result = MochieScenePacker.Apply(preview, adapter, name => EditorUtility.DisplayCancelableProgressBar("Packing Mochie materials", name, 0.5f));
-                message = $"{result.Changed} materials packed; {result.Errors.Count} failed." +
+                message = $"{result.Changed} materials packed; {result.Outputs.Count} PNGs created; {result.Reused} packs reused; {result.Errors.Count} failed." +
                     (result.Cancelled ? " Cancelled; completed materials stay packed." : "") + " Review the scene, then save. Undo restores material settings.";
                 Debug.Log("[Lightbulb] " + message + "\nGenerated textures:\n" + string.Join("\n", result.Outputs));
                 foreach (string error in result.Errors) Debug.LogError("[Lightbulb] " + error + " (material restored; any generated PNGs remain)");

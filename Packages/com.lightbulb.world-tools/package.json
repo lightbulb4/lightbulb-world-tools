@@ -1,7 +1,7 @@
 {
   "name": "com.lightbulb.world-tools",
   "displayName": "Lightbulb World Tools",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "unity": "2022.3",
   "description": "Unity editor tools for scene material map cleanup and Mochie texture packing, batch texture resizing and Crunch, GPU instancing, lightmap texel usage, vertex counts, mesh UVs, and targeted repairs.",
   "author": {
