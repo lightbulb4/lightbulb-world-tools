@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8 - 2026-09-12
+
+- Added **Lighting Experiment**: keep paired Bakery and Light Volumes configurations in one scene, switch Bakery / Point LVs only / Hybrid, and control individual light participation without reconverting or discarding independent edits.
+- Added point/spot and rectangular-area conversion, explicit force-point approximations, a native manager, and deterministic fitted regular volumes (up to 10). Saves a pre-experiment scene copy before conversion.
+- Excludes inactive lights through intensity, shadow/probe bake flags, native activity and Udon state; preserves regular-volume Bakery helpers while excluding their objects from baking. Restores saved lightmap scales and assignments when returning to Bakery.
+- Routes diffuse/specular and reflection participation for scene-local Mochie Standard / Standard Lite material copies. Includes explicit cleanup of either lighting system with Undo; source packages and baked texture files are retained.
+- Requires the verified Light Volumes **3.0.0-dev.18** contract and installed Bakery. Documents the native LV/Mochie shadow-bake RenderTexture error reproduced independently of this tool. Full-world visual bake validation remains required.
+
 ## 0.1.7 - 2026-09-12
 
 - Scene packing now creates one PNG per unique set of native packing inputs per batch and shares it across matching materials. Material identities and independent AreaLit occlusion settings are preserved. Source identities/import hashes, effective tiling/offset, baked strengths, map presence, and primary/detail mode determine sharing.

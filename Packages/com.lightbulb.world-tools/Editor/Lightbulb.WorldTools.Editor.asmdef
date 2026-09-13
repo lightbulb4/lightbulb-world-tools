@@ -1,7 +1,7 @@
 {
   "name": "Lightbulb.WorldTools.Editor",
   "rootNamespace": "Lightbulb.WorldTools",
-  "references": [],
+  "references": ["Lightbulb.WorldTools.State"],
   "includePlatforms": [
     "Editor"
   ],

@@ -1,6 +1,6 @@
 {
   "name": "Lightbulb.WorldTools.Editor.Tests",
-  "references": ["Lightbulb.WorldTools.Editor"],
+  "references": ["Lightbulb.WorldTools.Editor", "Lightbulb.WorldTools.State"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }
