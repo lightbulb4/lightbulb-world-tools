@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
@@ -228,11 +230,11 @@ namespace Lightbulb.WorldTools.Tests
         }
 
         [UnityTest]
-        public IEnumerator MenuOpensAndProjectDiscoveryFindsMaterialAssetsOutsideScenes()
+        public IEnumerator MenuOpensAndSceneDiscoveryExcludesUnassignedProjectMaterials()
         {
             Texture2D texture = Image("project-scan", Enumerable.Repeat(Color.white, 1024).ToArray(), 32, 32);
             Material material = Material("unused-in-scene", texture);
-            Assert.That(EmptyMaterialMaps.Materials(), Does.Contain(material));
+            Assert.That(SceneMaterials.Collect(SceneMaterials.Active()), Has.No.Member(material));
             Assert.That(EditorApplication.ExecuteMenuItem("Tools/Lightbulb/Find Empty Material Maps"), Is.True);
             var window = Resources.FindObjectsOfTypeAll<EmptyMaterialMapsWindow>().Single();
             try
@@ -246,6 +248,56 @@ namespace Lightbulb.WorldTools.Tests
                 Assert.That(material.GetTexture("_MetallicGlossMap"), Is.EqualTo(texture));
             }
             finally { window.Close(); }
+        }
+
+        [Test]
+        public void SceneScopeIncludesInactiveRenderersTerrainAndSkyboxButExcludesOtherScenes()
+        {
+            Scene previous = SceneManager.GetActiveScene();
+            if (string.IsNullOrEmpty(previous.path))
+            {
+                if (!Application.isBatchMode) Assert.Ignore("Save the open scene before running the scene-scope test.");
+                Assert.That(EditorSceneManager.SaveScene(previous, root + "/background.unity"), Is.True);
+            }
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            Assert.That(EditorSceneManager.SaveScene(scene, root + "/active.unity"), Is.True);
+            Scene other = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            try
+            {
+                SceneManager.SetActiveScene(scene);
+                Texture2D texture = Image("scene-shared", Enumerable.Repeat(Color.white, 1024).ToArray(), 32, 32);
+                Material used = Material("used", texture);
+                Material outside = Material("outside", texture);
+                Material terrainMaterial = Material("terrain", texture);
+                Material skyboxMaterial = Material("skybox", texture);
+                Material unassigned = Material("unassigned", texture);
+                var go = new GameObject("Inactive renderer");
+                go.AddComponent<MeshRenderer>().sharedMaterials = new[] { used, used };
+                go.SetActive(false);
+                new GameObject("Terrain").AddComponent<Terrain>().materialTemplate = terrainMaterial;
+                new GameObject("Camera").AddComponent<Skybox>().material = skyboxMaterial;
+                SceneManager.SetActiveScene(other);
+                new GameObject("Other scene").AddComponent<MeshRenderer>().sharedMaterial = outside;
+                Assert.Throws<InvalidOperationException>(() => SceneMaterials.RequireActive(scene));
+                SceneManager.SetActiveScene(scene);
+                var materials = SceneMaterials.Collect(scene);
+                Assert.That(materials.Count(m => m == used), Is.EqualTo(1));
+                Assert.That(materials, Has.Member(terrainMaterial));
+                Assert.That(materials, Has.Member(skyboxMaterial));
+                Assert.That(materials, Has.No.Member(outside));
+                Assert.That(materials, Has.No.Member(unassigned));
+                var scan = EmptyMaterialMaps.Collect(materials, 100);
+                Assert.That(EmptyMaterialMaps.Remove(scan.Entries, SceneMaterials.Collect(scene)), Is.EqualTo(3));
+                Assert.That(used.GetTexture("_MetallicGlossMap"), Is.Null);
+                Assert.That(outside.GetTexture("_MetallicGlossMap"), Is.EqualTo(texture));
+                Assert.That(unassigned.GetTexture("_MetallicGlossMap"), Is.EqualTo(texture));
+            }
+            finally
+            {
+                SceneManager.SetActiveScene(previous);
+                EditorSceneManager.CloseScene(scene, true);
+                EditorSceneManager.CloseScene(other, true);
+            }
         }
     }
 }

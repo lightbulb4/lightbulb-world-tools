@@ -23,15 +23,15 @@ Crunch targets disk/download size rather than GPU memory. Reducing resolution al
 
 ### Find Empty Material Maps
 
-Open **Tools > Lightbulb > Find Empty Material Maps**, then **Scan project materials** outside Play Mode.
+Open **Tools > Lightbulb > Find Empty Material Maps**, then **Scan active scene** outside Play Mode and Prefab Mode.
 
 - Finds assigned metallic, roughness/smoothness/gloss, ambient occlusion, normal/bump, height/parallax/displacement, and common packed data maps. Identification uses shader property names and Inspector descriptions, including saved properties from previous shaders. Custom slots with unrelated names/descriptions are not recognized.
-- Scans material assets across the project, including materials used only by other scenes, prefabs, or animations. Package, embedded, and loaded transient material references are included in the report. Unreferenced texture files are not scanned.
+- Scans materials currently assigned to renderers, terrains, and skyboxes in the **active scene**, including inactive objects and all renderer material slots. Other additive scenes, uninstantiated prefab assets, and materials referenced only by scripts or animation swaps are not scanned. Unreferenced texture files are not scanned. A preview cannot be applied after switching scenes.
 - **Exact matching** requires every pixel to have the same RGBA value. **Fuzzy matching** defaults to **99% identical pixels**, adjustable from 90–100%. The percentage measures pixels with exactly the same value, not a color-distance tolerance. Compression artifacts may reduce the match percentage.
 - Reads every pixel of the current imported mip-zero image on the GPU in bounded strips, without enabling Read/Write or changing import settings. This checks the current platform's imported resolution/compression, not the original source at a higher resolution. All four channels are checked together: useful alpha or packed-channel detail prevents an exact match. Normal maps are compared in their GPU channel packing, not displayed as decoded normal vectors. A supported graphics device is required; unavailable full-resolution streaming mips and unsupported texture types are reported as skipped.
 - Each result shows the texture, dimensions, constant sampled RGBA value, matching pixel count/percentage, and every material/property reference. **Filter results**, **Select all removable**, and **Select none** help review candidates. The filter does not change bulk selection.
-- **Remove** clears one texture from all its referenced material slots. **Remove all selected** does the same for the selected textures. This includes non-data slots (such as albedo) sharing that texture and unused saved texture properties. Shader source files and texture files are never deleted or modified.
-- All references must belong to editable standalone `.mat` assets under `Assets`. Read-only, package, embedded, or transient references block removal of that texture; extract/copy the material into `Assets` and update its references first. The tool rechecks texture changes, references, and editability before changing any material.
+- **Remove** clears one texture from all matching slots on the scanned scene materials. **Remove all selected** does the same for the selected textures. This includes non-data slots (such as albedo) sharing that texture and unused saved texture properties on those materials. Other materials are not edited. **A shared material asset also changes wherever else that same material is used**; scene-local copies are not created. Shader source files and texture files are never deleted or modified.
+- All matching references within the scene material set must belong to editable standalone `.mat` assets under `Assets`. Read-only, package, embedded, or transient references block removal of that texture; extract/copy the material into `Assets` and update its references first. The tool rechecks texture changes, scene references, and editability before changing any material.
 - Changes form one **Edit > Undo** operation and are not automatically saved. Review the scene, then save the project. Texture scale/offset and scalar values remain unchanged. Unity's normal material validation may update shader keywords (for example, Standard disables its metallic-map keyword).
 
 **Constant does not mean visually irrelevant.** A solid black metallic map, white roughness map, or even a uniform non-neutral normal can affect appearance. Removing it uses that shader's unassigned-map behavior; the tool does not translate constants into shader-specific sliders or implement custom shader keyword rules. Fuzzy removal deliberately discards the nonmatching pixels. Review before saving and use Undo if needed.
@@ -45,6 +45,19 @@ Finds repeated single-material `MeshRenderer` combinations whose material does n
 Multi-material renderers are intentionally skipped. The report is advisory: the shader must support GPU instancing, and a material property block may still affect batching behavior.
 
 ## Lighting
+
+### Pack Mochie Materials in Scene
+
+Open **Tools > Lightbulb > Pack Mochie Materials in Scene**, then **Scan active scene**. Review the eligible materials, exclude any you want to keep separate, and choose **Pack selected materials**.
+
+- Requires one installed copy of **Mochie Standard v2.13**, including its editor tools and `Hidden/Mochie/TexturePacker` shader. Other versions are refused until verified. World Tools remains usable without Mochie installed and does not modify or distribute Mochie source.
+- Uses the installed `Mochie.TexturePacker.PackTextures` method through an optional reflection adapter, plus Mochie's own keyword and blend-mode updates. Primary maps are supported for **Mochie/Standard** and **Mochie/Standard Lite**. **Include Standard detail maps** additionally packs Standard's detail data maps. Uber and Mobile are not supported.
+- Uses the same active-scene material scope as the empty-map tool: renderers, terrains, and skyboxes, including inactive objects. Materials used only outside that scene are excluded. Shared material assets still affect their other uses.
+- Only separate workflows with at least one assigned data map are eligible. Already packed workflows and empty inputs are skipped. Only editable standalone `.mat` assets under `Assets` are changed. Unsupported texture types and unavailable full-resolution streaming mips are reported.
+- Primary channel layout is **R = AO, G = roughness/smoothness, B = metallic, A = height** when present. Detail layout is RGB = AO / roughness / metallic. The native packer reads each source's red channel and handles source tiling/offset and linear PNG import. New uniquely named `*_Packed.png` files are written beside their material; existing textures are not overwritten.
+- Primary AO/roughness/metallic strengths are baked and the corresponding packed strengths are reset to 1, as in Mochie's button. Height and detail maps are passed with unit packing strength because the shader still applies those material strengths afterward. Detail channels without a source map have their blend strength set to 0, matching the separate workflow's absent-map behavior.
+- Source texture references/files are retained. The tool validates scene identity, material state, source import hashes, output assignment/import, and packed keywords. A failed material is restored; any PNG created before failure remains on disk. Cancellation stops between materials and keeps completed results.
+- **Edit > Undo** restores material settings for the batch. It does not delete generated PNGs. Materials are not automatically saved; review the scene and then save the project. Packing and import compression can affect appearance, especially non-grayscale source maps or detail maps using alpha in blending. This is not a guarantee of pixel-identical rendering or reduced build size.
 
 ### Fix Mochie Linear Textures in Scene
 

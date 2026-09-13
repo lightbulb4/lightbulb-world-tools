@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Lightbulb.WorldTools
 {
@@ -15,6 +16,7 @@ namespace Lightbulb.WorldTools
         private string search = "";
         private string message;
         private bool showNotes;
+        private Scene scannedScene;
 
         [MenuItem("Tools/Lightbulb/Find Empty Material Maps")]
         internal static void Open()
@@ -33,7 +35,8 @@ namespace Lightbulb.WorldTools
             EditorGUILayout.LabelField("Find Empty Material Maps", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Metallic, roughness / smoothness, AO, normal, height, and packed data maps", EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.HelpBox("Finds constant textures, including solid black, solid white, and flat normal maps. " +
-                "Remove clears ALL material slots referencing the texture, including other map types and unused saved slots. " +
+                "Scans materials assigned to renderers, terrains, and skyboxes in the active scene, including inactive objects. " +
+                "Remove clears matching slots on those materials. Shared material assets also change wherever else they are used. " +
                 "Files are kept. Changes support Undo; save the project when satisfied.", MessageType.Info);
             EditorGUILayout.HelpBox("A constant map can still affect appearance. Removal uses the shader's unassigned-map defaults; " +
                 "sliders are not adjusted to compensate. Review the scene after removing maps. " +
@@ -48,11 +51,11 @@ namespace Lightbulb.WorldTools
                 if (EditorGUI.EndChangeCheck()) { scan = null; message = "Settings changed. Scan again."; }
                 EditorGUILayout.LabelField("Checks every pixel at the current imported resolution, including alpha. " +
                     "Exact pixel values; no thumbnail sampling or color tolerance. Normal values use GPU channel packing.", EditorStyles.wordWrappedMiniLabel);
-                if (GUILayout.Button("Scan project materials")) RunScan();
+                if (GUILayout.Button("Scan active scene")) RunScan();
 
                 if (scan != null)
                 {
-                    EditorGUILayout.LabelField($"{scan.Checked} maps checked | {scan.Entries.Count} candidates | {scan.Notes.Count} scan notes");
+                    EditorGUILayout.LabelField($"{scannedScene.name} | {scan.Checked} maps checked | {scan.Entries.Count} candidates | {scan.Notes.Count} scan notes");
                     search = EditorGUILayout.TextField("Filter results", search);
                     using (new EditorGUILayout.HorizontalScope())
                     {
@@ -122,7 +125,8 @@ namespace Lightbulb.WorldTools
             scan = null;
             try
             {
-                scan = EmptyMaterialMaps.Collect(EmptyMaterialMaps.Materials(Cancel), fuzzy ? minimum : 100, Cancel);
+                scannedScene = SceneMaterials.Active();
+                scan = EmptyMaterialMaps.Collect(SceneMaterials.Collect(scannedScene, Cancel), fuzzy ? minimum : 100, Cancel);
                 foreach (var entry in scan.Entries) entry.Included = CanRemove(entry);
                 message = scan.Entries.Count == 0 ? "No matching maps found. Expand scan notes for any skipped textures." : null;
             }
@@ -133,9 +137,12 @@ namespace Lightbulb.WorldTools
 
         private void Apply(List<EmptyMaterialMaps.Entry> entries)
         {
+            try { SceneMaterials.RequireActive(scannedScene); }
+            catch (Exception ex) { message = ex.Message; return; }
             int references = entries.Sum(e => e.Uses.Count);
             if (!EditorUtility.DisplayDialog("Remove Empty Material Maps",
-                $"Clear {references} material references to {entries.Count} texture(s) across the project?\n\n" +
+                $"Clear {references} material references to {entries.Count} texture(s) on materials in '{scannedScene.name}'?\n\n" +
+                "Shared material assets also change in other scenes or prefabs that use them. " +
                 "This includes every material slot shown in the preview, even other map types. Files stay on disk. " +
                 "Shader defaults can change the appearance, and fuzzy matches discard real pixels. " +
                 "Use Edit > Undo to restore all references. Materials are not automatically saved.", "Remove references", "Cancel")) return;
@@ -147,7 +154,8 @@ namespace Lightbulb.WorldTools
                 try
                 {
                     foreach (var entry in entries) entry.Included = true;
-                    changed = EmptyMaterialMaps.Remove(entries, EmptyMaterialMaps.Materials(Cancel));
+                    SceneMaterials.RequireActive(scannedScene);
+                    changed = EmptyMaterialMaps.Remove(entries, SceneMaterials.Collect(scannedScene, Cancel));
                 }
                 finally { for (int i = 0; i < entries.Count; i++) entries[i].Included = inclusion[i]; }
                 foreach (var entry in entries) scan.Entries.Remove(entry);

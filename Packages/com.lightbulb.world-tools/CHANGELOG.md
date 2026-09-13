@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 - 2026-09-12
+
+- **Find Empty Material Maps** now scans only materials assigned to renderers, terrains, and skyboxes in the active scene, including inactive objects. Removal is limited to those materials, and switching scenes requires a new scan. Shared material assets still affect their other uses.
+- Added **Pack Mochie Materials in Scene**, using the installed Mochie Standard v2.13 texture packer without modifying or bundling Mochie. Supports Standard / Standard Lite primary maps and optional Standard detail maps, preview/exclusion, unique output PNGs, cancellation, stale-preview checks, and material Undo.
+- Keeps height/detail strengths from being applied twice during packing and disables blending for absent detail channels. Original source maps are retained; generated PNGs remain after Undo.
+
 ## 0.1.5 - 2026-09-12
 
 - Added **Find Empty Material Maps** under **Tools > Lightbulb** to find uniform metallic, roughness/smoothness, AO, normal, height, and packed data maps across project materials.

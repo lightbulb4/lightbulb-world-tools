@@ -87,21 +87,6 @@ namespace Lightbulb.WorldTools
 
         internal static Texture ReferencedTexture(Use use) => use.Texture;
 
-        internal static List<Material> Materials(Func<string, bool> cancel = null)
-        {
-            var materials = new HashSet<Material>();
-            foreach (string guid in AssetDatabase.FindAssets("t:Material"))
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (cancel != null && cancel(path)) throw new OperationCanceledException();
-                foreach (Material material in AssetDatabase.LoadAllAssetsAtPath(path).OfType<Material>()) materials.Add(material);
-            }
-            // Also report loaded transient references; these cannot safely be persisted by editing a .mat.
-            foreach (Material material in Resources.FindObjectsOfTypeAll<Material>())
-                if ((material.hideFlags & HideFlags.HideAndDontSave) == 0) materials.Add(material);
-            return materials.Where(m => m != null).ToList();
-        }
-
         internal static Scan Collect(IEnumerable<Material> materials, double minimum, Func<string, bool> cancel = null)
         {
             ValidateThreshold(minimum);
