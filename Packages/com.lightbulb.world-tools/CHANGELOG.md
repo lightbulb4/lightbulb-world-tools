@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.15 - 2026-09-14
+
+- **Scene Texture Crunch Compression** now lists only textures with pending changes. Textures already matching the requested settings are summarized by count; skipped textures and their reasons are in a collapsed section. Shows a clear empty result when nothing needs changing.
+
 ## 0.1.14 - 2026-09-14
 
 - Simplified **Find Unreferenced Disabled Objects** to show only eligible disabled objects, selected by default, in compact rows. Referenced objects and verbose per-object explanations are hidden. Genuine scan issues appear once above the results; incomplete scans remain blocked.

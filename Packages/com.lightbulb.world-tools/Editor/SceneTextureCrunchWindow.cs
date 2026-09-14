@@ -16,6 +16,10 @@ namespace Lightbulb.WorldTools
         private string message;
         private Vector2 scroll;
         private string filter = "";
+        private bool hasPreview;
+        private bool showSkipped;
+
+        private static bool IsSkipNote(string note) => note.IndexOf("skipped", StringComparison.OrdinalIgnoreCase) >= 0;
 
         [MenuItem("Tools/Lightbulb/Scene Texture Crunch Compression")]
         private static void Open()
@@ -30,10 +34,13 @@ namespace Lightbulb.WorldTools
         private void Scan()
         {
             entries.Clear();
+            hasPreview = false;
+            showSkipped = false;
             scene = SceneMaterials.Active();
             var found = Discover();
             entries = MaterialTextureBatch.CollectTextures(found.Objects.OfType<Texture>(),
                 enable ? MaterialTextureBatch.CrunchMode.Enable : MaterialTextureBatch.CrunchMode.Disable, quality);
+            hasPreview = true;
             message = found.Uncertainties.Count == 0 ? null : "Some dependencies could not be inspected:\n" + string.Join("\n", found.Uncertainties);
         }
 
@@ -54,6 +61,7 @@ namespace Lightbulb.WorldTools
             var result = MaterialTextureBatch.Apply(entries, (i, count, path) =>
                 EditorUtility.DisplayCancelableProgressBar("Updating scene texture compression", path, (float)i / count));
             entries.Clear();
+            hasPreview = false;
             message = $"{result.Changed} changed; {result.Failed} failed." +
                 (result.Cancelled ? " Cancelled; completed changes remain applied." : "") +
                 (result.BackupRoot == null ? "" : "\nOriginal import settings: " + result.BackupRoot);
@@ -68,7 +76,7 @@ namespace Lightbulb.WorldTools
                 EditorGUI.BeginChangeCheck();
                 enable = EditorGUILayout.Popup("Crunch compression", enable ? 0 : 1, new[] { "Enable", "Disable" }) == 0;
                 if (enable) quality = EditorGUILayout.IntSlider("Crunch quality", quality, 0, 100);
-                if (EditorGUI.EndChangeCheck()) { entries.Clear(); message = "Settings changed. Scan again to preview."; }
+                if (EditorGUI.EndChangeCheck()) { entries.Clear(); hasPreview = false; message = "Settings changed. Scan again to preview."; }
                 EditorGUILayout.LabelField("Higher quality means larger files and longer imports. Crunch reduces download size, not VRAM. " +
                     "Resolution is preserved. Default and existing enabled platform overrides are updated where supported.", EditorStyles.wordWrappedMiniLabel);
                 using (new EditorGUILayout.HorizontalScope())
@@ -78,22 +86,39 @@ namespace Lightbulb.WorldTools
                     if (GUILayout.Button("Select none")) foreach (var entry in entries) entry.Included = false;
                 }
                 filter = EditorGUILayout.TextField("Filter textures", filter);
-                int count = entries.Count(e => e.Included && e.Changes.Count > 0);
-                EditorGUILayout.LabelField($"{entries.Count} unique textures | {count} selected changes");
+                var changing = entries.Where(e => e.Changes.Count > 0).ToList();
+                var skipped = entries.Where(e => e.Changes.Count == 0 && e.Notes.Any(IsSkipNote)).ToList();
+                int count = changing.Count(e => e.Included);
+                if (hasPreview)
+                    EditorGUILayout.LabelField($"{changing.Count} textures need changes | {count} selected | " +
+                        $"{entries.Count - changing.Count - skipped.Count} already match | {skipped.Count} skipped");
                 scroll = EditorGUILayout.BeginScrollView(scroll);
-                foreach (var entry in entries)
+                if (hasPreview && changing.Count == 0)
+                    EditorGUILayout.LabelField("No texture changes to apply.", EditorStyles.wordWrappedLabel);
+                foreach (var entry in changing)
                 {
                     if ((entry.Path + " " + entry.Texture?.name).IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
                     using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                     {
                         using (new EditorGUILayout.HorizontalScope())
                         {
-                            using (new EditorGUI.DisabledScope(entry.Changes.Count == 0)) entry.Included = EditorGUILayout.Toggle(entry.Included, GUILayout.Width(18));
+                            entry.Included = EditorGUILayout.Toggle(entry.Included, GUILayout.Width(18));
                             EditorGUILayout.ObjectField(entry.Texture, typeof(Texture), false);
                         }
                         EditorGUILayout.LabelField(entry.Path, EditorStyles.wordWrappedMiniLabel);
                         EditorGUILayout.LabelField(string.Join("\n", entry.Notes), EditorStyles.wordWrappedLabel);
                     }
+                }
+                if (skipped.Count > 0)
+                {
+                    showSkipped = EditorGUILayout.Foldout(showSkipped, $"Skipped textures ({skipped.Count})", true);
+                    if (showSkipped)
+                        foreach (var entry in skipped)
+                        {
+                            if ((entry.Path + " " + entry.Texture?.name).IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            EditorGUILayout.ObjectField(entry.Texture, typeof(Texture), false);
+                            EditorGUILayout.LabelField(string.Join("\n", entry.Notes.Where(IsSkipNote)), EditorStyles.wordWrappedMiniLabel);
+                        }
                 }
                 EditorGUILayout.EndScrollView();
                 using (new EditorGUI.DisabledScope(count == 0))
