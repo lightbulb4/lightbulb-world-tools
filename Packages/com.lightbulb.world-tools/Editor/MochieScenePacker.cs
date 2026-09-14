@@ -247,7 +247,7 @@ namespace Lightbulb.WorldTools
                 string prefix = detail ? "_Detail" : "_";
                 var arguments = new List<object> { material };
                 // Encode exact native inputs, not the whole material. In particular, AreaLit settings,
-                // runtime height/detail strengths, and material names do not change the baked pixels.
+                // runtime strengths and material names do not change the packed pixels.
                 using (var bytes = new MemoryStream())
                 using (var key = new BinaryWriter(bytes))
                 {
@@ -257,11 +257,9 @@ namespace Lightbulb.WorldTools
                         if (detail && channel == "Height") { arguments.Add(null); arguments.Add(1f); continue; }
                         var property = properties[prefix + channel + "Map"];
                         arguments.Add(property);
-                        // Height and detail strengths are still applied by the packed shader at runtime.
-                        // Passing 1 keeps them from being baked and then applied a second time.
-                        float strength = detail || channel == "Height" ? 1f : properties[prefix + channel + "Strength"].floatValue;
-                        arguments.Add(strength);
-                        key.Write(strength);
+                        // Keep source channels unscaled. Strengths stay editable on each material,
+                        // including materials sharing this output, and are applied by the shader.
+                        arguments.Add(1f);
                         Vector4 st = (Vector4)scaleAndOffset.Invoke(null, new object[] { material, property, property.name });
                         for (int i = 0; i < 4; i++) key.Write(st[i]);
                         Texture texture = property.textureValue;
@@ -323,9 +321,8 @@ namespace Lightbulb.WorldTools
                 {
                     material.SetFloat("_HeightChannel", 3);
                     material.SetFloat("_PackedHeight", material.GetTexture("_HeightMap") != null ? 1 : 0);
-                    material.SetFloat("_PackedMetallicStrength", 1);
-                    material.SetFloat("_PackedRoughnessStrength", 1);
-                    material.SetFloat("_PackedOcclusionStrength", 1);
+                    foreach (string channel in new[] { "Metallic", "Roughness", "Occlusion" })
+                        material.SetFloat("_Packed" + channel + "Strength", material.GetFloat("_" + channel + "Strength"));
                 }
                 else
                 {

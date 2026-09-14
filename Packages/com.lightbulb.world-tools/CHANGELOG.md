@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.12 - 2026-09-14
+
+- New Mochie primary packs keep metallic, roughness and occlusion channels unscaled and copy their separate-mode strengths into the packed-mode sliders. Zero strengths no longer erase source detail from the new packed image; slider adjustments remain available afterward.
+- Materials with identical packing inputs can share an output despite different strengths, with independent sliders. Height/detail behavior and the two-distinct-source minimum are preserved; no Mochie shader or source files are changed.
+- Existing packed textures and their slider values are retained during reference cleanup. This does not reconstruct channels from older strength-baked packs; use the original source maps to repack those materials.
+
 ## 0.1.11 - 2026-09-14
 
 - Mochie scene packing now requires at least two distinct source textures per packed output. Primary and detail are checked independently; a single texture reused in multiple slots is skipped, with a preview note.

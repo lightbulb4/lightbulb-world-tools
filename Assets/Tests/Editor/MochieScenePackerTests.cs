@@ -167,9 +167,16 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(result.Changed, Is.EqualTo(1));
             Assert.That(result.Outputs.Count, Is.EqualTo(1));
             Color packed = RawPixel(result.Outputs.Single());
-            Assert.That(packed.r, Is.EqualTo(0.82f).Within(0.01f));
-            Assert.That(packed.g, Is.EqualTo(0.16f).Within(0.01f));
-            Assert.That(packed.b, Is.EqualTo(0.20f).Within(0.01f));
+            Assert.That(packed.r, Is.EqualTo(0.40f).Within(0.01f));
+            Assert.That(packed.g, Is.EqualTo(0.40f).Within(0.01f));
+            Assert.That(packed.b, Is.EqualTo(0.40f).Within(0.01f));
+            Assert.That(material.GetFloat("_PackedOcclusionStrength"), Is.EqualTo(0.3f));
+            Assert.That(material.GetFloat("_PackedRoughnessStrength"), Is.EqualTo(0.4f));
+            Assert.That(material.GetFloat("_PackedMetallicStrength"), Is.EqualTo(0.5f));
+            // Same scalar results as Mochie's separate shader paths, with strengths applied once.
+            Assert.That(Mathf.Lerp(1, packed.r, material.GetFloat("_PackedOcclusionStrength")), Is.EqualTo(.82f).Within(.01f));
+            Assert.That(packed.g * material.GetFloat("_PackedRoughnessStrength"), Is.EqualTo(.16f).Within(.01f));
+            Assert.That(packed.b * material.GetFloat("_PackedMetallicStrength"), Is.EqualTo(.20f).Within(.01f));
             Assert.That(packed.a, Is.EqualTo(0.40f).Within(0.01f), "Height strength must not be baked a second time");
             Assert.That(material.GetFloat("_HeightStrength"), Is.EqualTo(0.05f));
             Assert.That(material.GetFloat("_PrimaryWorkflow"), Is.EqualTo(1));
@@ -254,6 +261,12 @@ namespace Lightbulb.WorldTools.Tests
             string strength = detail ? "_DetailRoughnessStrength" : "_HeightStrength";
             a.SetFloat(strength, 0.1f);
             b.SetFloat(strength, 0.8f);
+            if (!detail)
+                foreach (string channel in new[] { "Metallic", "Roughness", "Occlusion" })
+                {
+                    a.SetFloat("_" + channel + "Strength", 0);
+                    b.SetFloat("_" + channel + "Strength", 1);
+                }
             string beforeA = EditorJsonUtility.ToJson(a);
             string beforeB = EditorJsonUtility.ToJson(b);
             var result = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, true), new MochieScenePacker.Adapter());
@@ -272,6 +285,18 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(b.GetTextureScale("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.5f, 0.5f)));
             Assert.That(a.GetFloat(strength), Is.EqualTo(0.1f));
             Assert.That(b.GetFloat(strength), Is.EqualTo(0.8f));
+            if (!detail)
+            {
+                foreach (string channel in new[] { "Metallic", "Roughness", "Occlusion" })
+                {
+                    Assert.That(a.GetFloat("_Packed" + channel + "Strength"), Is.Zero);
+                    Assert.That(b.GetFloat("_Packed" + channel + "Strength"), Is.EqualTo(1));
+                }
+                Assert.That(RawPixel(result.Outputs.Single()).g, Is.EqualTo(.4f).Within(.01f), "Zero strength must retain source detail");
+                a.SetFloat("_PackedRoughnessStrength", 1);
+                Assert.That(a.GetTexture("_PackedMap"), Is.SameAs(b.GetTexture("_PackedMap")));
+                Assert.That(RawPixel(result.Outputs.Single()).g, Is.EqualTo(.4f).Within(.01f));
+            }
             Assert.That(b.IsKeywordEnabled(detail ? "_WORKFLOW_DETAIL_PACKED_ON" : "_WORKFLOW_PACKED_ON"), Is.True);
             Undo.PerformUndo();
             Assert.That(EditorJsonUtility.ToJson(a), Is.EqualTo(beforeA));
@@ -279,7 +304,6 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(File.Exists(result.Outputs.Single()), Is.True);
         }
 
-        [TestCase("strength")]
         [TestCase("offset")]
         [TestCase("scale")]
         [TestCase("source")]
@@ -294,7 +318,6 @@ namespace Lightbulb.WorldTools.Tests
             var metallic = Texture();
             a.SetTexture("_MetallicMap", metallic);
             b.SetTexture("_MetallicMap", metallic);
-            if (difference == "strength") b.SetFloat("_RoughnessStrength", 0.37f);
             if (difference == "offset") b.SetTextureOffset("_RoughnessMap", new Vector2(0.2f, 0.3f));
             if (difference == "scale") b.SetTextureScale("_RoughnessMap", new Vector2(2, 3));
             if (difference == "source") b.SetTexture("_RoughnessMap", Texture());
@@ -304,6 +327,27 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(result.Outputs.Count, Is.EqualTo(2));
             Assert.That(result.Reused, Is.Zero);
             Assert.That(a.GetTexture("_PackedMap"), Is.Not.EqualTo(b.GetTexture("_PackedMap")));
+        }
+
+        [TestCase("Mochie/Standard", "Metallic", 2)]
+        [TestCase("Mochie/Standard", "Roughness", 1)]
+        [TestCase("Mochie/Standard", "Occlusion", 0)]
+        [TestCase("Mochie/Standard Lite", "Metallic", 2)]
+        [TestCase("Mochie/Standard Lite", "Roughness", 1)]
+        [TestCase("Mochie/Standard Lite", "Occlusion", 0)]
+        public void MissingPrimaryMapsKeepNeutralChannelAndOriginalSlider(string shaderName, string missing, int channelIndex)
+        {
+            Material material = Material(shaderName);
+            foreach (string channel in new[] { "Metallic", "Roughness", "Occlusion" })
+            {
+                if (channel != missing) material.SetTexture("_" + channel + "Map", Texture());
+                material.SetFloat("_" + channel + "Strength", .37f);
+            }
+            var result = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, false), new MochieScenePacker.Adapter());
+            Assert.That(result.Errors, Is.Empty);
+            Assert.That(RawPixel(result.Outputs.Single())[channelIndex], Is.EqualTo(1).Within(.01f));
+            foreach (string channel in new[] { "Metallic", "Roughness", "Occlusion" })
+                Assert.That(material.GetFloat("_Packed" + channel + "Strength"), Is.EqualTo(.37f));
         }
 
         private Material Packed(Texture2D texture, bool detail = false)
@@ -336,6 +380,9 @@ namespace Lightbulb.WorldTools.Tests
             material.SetFloat("_PackedHeight", 1);
             material.SetFloat("_HeightStrength", 0.05f);
             material.SetFloat("_DetailRoughnessStrength", 0.37f);
+            material.SetFloat("_PackedMetallicStrength", .23f);
+            material.SetFloat("_PackedRoughnessStrength", .46f);
+            material.SetFloat("_PackedOcclusionStrength", .69f);
             string before = EditorJsonUtility.ToJson(material);
             byte[] original = File.ReadAllBytes(AssetDatabase.GetAssetPath(source));
             var preview = MochieScenePacker.Collect(scene, true);
@@ -355,6 +402,9 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(material.GetFloat("_PackedHeight"), Is.EqualTo(1));
             Assert.That(material.GetFloat("_HeightStrength"), Is.EqualTo(0.05f));
             Assert.That(material.GetFloat("_DetailRoughnessStrength"), Is.EqualTo(0.37f));
+            Assert.That(material.GetFloat("_PackedMetallicStrength"), Is.EqualTo(.23f));
+            Assert.That(material.GetFloat("_PackedRoughnessStrength"), Is.EqualTo(.46f));
+            Assert.That(material.GetFloat("_PackedOcclusionStrength"), Is.EqualTo(.69f));
             Assert.That(material.GetTextureOffset("_AreaLitOcclusion"), Is.EqualTo(new Vector2(0.7f, 0.8f)));
             foreach (string property in new[] { "_AreaLitOcclusion", "_NormalMap", "_DetailNormalMap", "_HeightMask", "_MainTex" })
                 Assert.That(material.GetTexture(property), Is.EqualTo(source));
