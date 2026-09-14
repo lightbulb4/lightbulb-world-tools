@@ -6,6 +6,27 @@ Open the commands directly under **Tools > Lightbulb**.
 
 ## Rendering
 
+### Scene Texture Crunch Compression
+
+Open **Tools > Lightbulb > Scene Texture Crunch Compression**, choose **Enable** or **Disable**, then **Scan active scene**. Review the texture list, exclude individual textures, and apply the selected changes.
+
+- Scans current in-memory scene references, including inactive objects, materials, sprites/UI, terrain layers and vegetation prototypes, referenced prefab assets, serialized script/ScriptableObject fields, animation texture/material swaps, skybox/reflection textures and lightmaps. Deduplicates texture assets. Uninspectable dependencies are reported. Runtime string-based loading, shader globals assigned by code, and arbitrary custom serialization are not guaranteed discoverable.
+- **Crunch quality** ranges from **0 to 100** and defaults to **50**. Higher quality produces larger files and longer imports. Enabling sets this quality on compatible settings, including textures already using Crunch. Disabling preserves the stored quality for later use. Crunch reduces disk/download size, not runtime VRAM.
+- **Texture dimensions and maximum-resolution settings are preserved.** Updates Default and every existing enabled platform override; explicit DXT/ETC formats map to/from corresponding Crunch formats. Incompatible formats such as BC7/ASTC, HDR or uncompressed Automatic settings are skipped rather than coerced. Generated textures, lightmap-type imports, cubes, arrays, read-only metadata and non-embedded package assets are listed but skipped.
+- Import settings belong to shared assets: changes also affect other scenes using those textures. Original image files remain untouched. Scene membership and import settings are rechecked before applying. Cancellation stops between textures, leaving completed changes applied.
+- Original `.meta` files are backed up under `Library/LightbulbWorldTools/Backups/MaterialTextures/<run>/`. To restore, close Unity and copy the backed-up files to their matching project paths. This restores all import settings and is **not Unity Undo**; deleting `Library` removes the backups.
+
+### Find Unreferenced Disabled Objects
+
+Open **Tools > Lightbulb > Find Unreferenced Disabled Objects**, then **Scan active scene**. Review disabled branches and their detected reference sources, exclude anything you want to keep, then choose **Mark selected EditorOnly**. This tags branch roots; it does not delete objects or automatically save the scene.
+
+- Candidates must be explicitly disabled (`activeSelf == false`); an active child beneath an inactive parent is not independently considered disabled. Already-EditorOnly branches are omitted.
+- Checks references to GameObjects, components and descendants. An external reference to any child protects the parent branch. Structural hierarchy links and references wholly inside the same branch do not prevent removing that whole branch from a build. References from other loaded scenes also protect active-scene targets; those other scenes are not modified.
+- Detects serialized fields/arrays, UnityEvents, animation object curves and hierarchy paths (including Animator overrides and legacy Animation), Timeline bindings/exposed references, and live Udon public variables/arrays. Timeline-bound hierarchies and humanoid Animator hierarchies are conservatively retained. The optional Udon adapter is tested with VRChat SDK **3.10.5** and does not require or modify the SDK.
+- Missing scripts, unsupported Udon reference containers or failed serialized inspection make the scan uncertain and block cleanup. Objects marked NotEditable and the RenderSettings sun are retained. The tool rescans before changing tags and refuses selected objects that are no longer eligible.
+- **No detected references is not proof an object is never used.** Runtime name/tag lookups, hierarchy enumeration, animation-event strings and arbitrary custom code can still activate or use it. Exclude such objects manually. EditorOnly excludes **all children** from builds too. Assets referenced elsewhere can remain in the build.
+- **Edit > Undo** restores the original tags. **Restore original tags from this window** also restores changed objects in the active scene, provided they still have the EditorOnly tag. Restore records survive script reloads while the window stays open; retain your normal scene/source-control backup for later sessions. Subsequent user tag changes are left alone. Nested selected branches are consolidated to their highest selected root.
+
 ### Resize Referenced Textures
 
 Multi-select materials in the **Project** window, then right-click **Materials > Resize Referenced Textures...**. Also available at **Tools > Lightbulb > Resize Referenced Textures...**.

@@ -76,7 +76,24 @@ namespace Lightbulb.WorldTools
             return entries.Values.OrderBy(e => e.Path, StringComparer.Ordinal).ToList();
         }
 
-        private static void Plan(Entry entry, int maximum, CrunchMode crunch)
+        internal static List<Entry> CollectTextures(IEnumerable<Texture> textures, CrunchMode crunch, int quality)
+        {
+            if (quality < 0 || quality > 100) throw new ArgumentOutOfRangeException(nameof(quality));
+            var entries = textures.Where(t => t != null).Distinct().Select(t => new Entry
+            {
+                Texture = t, Path = AssetDatabase.GetAssetPath(t)
+            }).GroupBy(e => string.IsNullOrEmpty(e.Path) ? "instance:" + e.Texture.GetInstanceID() : e.Path)
+                .Select(g => g.First()).OrderBy(e => e.Path, StringComparer.Ordinal).ToList();
+            foreach (Entry entry in entries)
+            {
+                try { Plan(entry, 0, crunch, quality); }
+                catch (Exception ex) { entry.Changes.Clear(); entry.Notes.Add("Skipped: " + ex.Message); }
+                entry.Included = entry.Changes.Count > 0;
+            }
+            return entries;
+        }
+
+        private static void Plan(Entry entry, int maximum, CrunchMode crunch, int? quality = null)
         {
             var importer = AssetImporter.GetAtPath(entry.Path) as TextureImporter;
             if (!(entry.Texture is Texture2D) || importer == null ||
@@ -101,7 +118,7 @@ namespace Lightbulb.WorldTools
                 string label = settings.name == "DefaultTexturePlatform" ? "Default" : settings.name;
                 bool changed = false;
                 // A small original or an already lower cap needs no size-setting change.
-                if (Math.Max(width, height) > maximum && settings.maxTextureSize > maximum)
+                if (maximum > 0 && Math.Max(width, height) > maximum && settings.maxTextureSize > maximum)
                 {
                     entry.Notes.Add($"{label}: Max Size {settings.maxTextureSize} -> {maximum}");
                     settings.maxTextureSize = maximum;
@@ -111,7 +128,7 @@ namespace Lightbulb.WorldTools
                 bool hdr = extension.Equals(".exr", StringComparison.OrdinalIgnoreCase) ||
                     extension.Equals(".hdr", StringComparison.OrdinalIgnoreCase) ||
                     UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsHDRFormat(entry.Texture.graphicsFormat);
-                changed |= PlanCrunch(settings, crunch, hdr, entry.Notes, label);
+                changed |= PlanCrunch(settings, crunch, hdr, entry.Notes, label, quality);
                 if (changed) entry.Changes.Add(settings);
             }
             if (entry.Changes.Count == 0) entry.Notes.Add("No changes needed.");
@@ -141,7 +158,7 @@ namespace Lightbulb.WorldTools
         }
 
         internal static bool PlanCrunch(TextureImporterPlatformSettings settings, CrunchMode mode, bool hdr,
-            List<string> notes, string label)
+            List<string> notes, string label, int? quality = null)
         {
             if (mode == CrunchMode.LeaveUnchanged) return false;
             bool enable = mode == CrunchMode.Enable;
@@ -174,6 +191,12 @@ namespace Lightbulb.WorldTools
 
             bool changed = settings.crunchedCompression != enable || settings.format != format;
             settings.crunchedCompression = enable;
+            if (enable && quality.HasValue && settings.compressionQuality != quality.Value)
+            {
+                notes.Add($"{label}: Crunch quality {settings.compressionQuality} -> {quality.Value}");
+                settings.compressionQuality = quality.Value;
+                changed = true;
+            }
             if (changed) notes.Add(label + ": Crunch " + (enable ? "on" : "off") +
                 (settings.format != format ? $" ({format} -> {settings.format})" : "") +
                 (enable && format == TextureImporterFormat.Automatic ? " (Automatic: where supported by Unity)" : ""));
@@ -273,7 +296,8 @@ namespace Lightbulb.WorldTools
                     {
                         TextureImporterPlatformSettings actual = importer.GetPlatformTextureSettings(expected.name);
                         if (actual.maxTextureSize != expected.maxTextureSize || actual.format != expected.format ||
-                            actual.crunchedCompression != expected.crunchedCompression || actual.overridden != expected.overridden)
+                            actual.crunchedCompression != expected.crunchedCompression || actual.overridden != expected.overridden ||
+                            actual.compressionQuality != expected.compressionQuality)
                             throw new InvalidOperationException("Import settings did not stick for " + expected.name + ". Check asset postprocessors.");
                     }
                     result.Changed++;

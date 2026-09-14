@@ -1,9 +1,9 @@
 {
   "name": "com.lightbulb.world-tools",
   "displayName": "Lightbulb World Tools",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "unity": "2022.3",
-  "description": "Unity editor tools for reversible Bakery/Light Volumes lighting experiments, scene material cleanup and Mochie packing, texture resizing and Crunch, GPU instancing, lightmap usage, geometry diagnostics, and targeted repairs.",
+  "description": "Unity editor tools for reversible Bakery/Light Volumes lighting experiments, scene texture Crunch compression, disabled-object reference auditing, material cleanup and Mochie packing, texture resizing, geometry diagnostics, and targeted repairs.",
   "author": {
     "name": "Lightbulb",
     "email": "nobodysystems@gmail.com",

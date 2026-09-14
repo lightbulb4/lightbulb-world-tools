@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.13 - 2026-09-14
+
+- Added **Scene Texture Crunch Compression**: scan active-scene texture dependencies, preview/exclude textures, enable Crunch with a 0–100 quality slider or disable it. Preserves resolution, updates supported Default/platform settings, backs up import metadata, and checks for stale references/settings.
+- Added **Find Unreferenced Disabled Objects**: inspect disabled branches for external references to their objects or descendants, including serialized fields, UnityEvents, animation paths, Timeline bindings and live Udon variables. Mark selected candidates EditorOnly with Undo and original-tag restoration while the window remains open; no objects are deleted or scenes automatically saved.
+- Reference discovery includes inactive objects, referenced prefab assets, terrain layers/prototypes, sprites and animation material swaps. Cleanup checks incoming references from all loaded ordinary scenes while changing only the active scene. Missing scripts or unsupported reference inspection block cleanup; runtime name/tag lookups remain a manual exclusion.
+- Validated with 26 focused Unity 2022.3 EditMode tests, including native Timeline and VRChat SDK 3.10.5 Udon references, texture import round-trips, prefab/terrain discovery, exclusions, stale-preview refusal and Undo/tag restoration.
+
 ## 0.1.12 - 2026-09-14
 
 - New Mochie primary packs keep metallic, roughness and occlusion channels unscaled and copy their separate-mode strengths into the packed-mode sliders. Zero strengths no longer erase source detail from the new packed image; slider adjustments remain available afterward.

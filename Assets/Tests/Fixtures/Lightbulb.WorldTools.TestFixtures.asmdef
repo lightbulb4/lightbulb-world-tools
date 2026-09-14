@@ -1,0 +1,5 @@
+{
+  "name": "Lightbulb.WorldTools.TestFixtures",
+  "references": [],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
