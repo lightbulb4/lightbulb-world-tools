@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11 - 2026-09-14
+
+- Mochie scene packing now requires at least two distinct source textures per packed output. Primary and detail are checked independently; a single texture reused in multiple slots is skipped, with a preview note.
+- Already-packed material cleanup still clears safe leftover source references without generating another texture. Skipped separate workflows retain all references and settings.
+
 ## 0.1.10 - 2026-09-13
 
 - Removed the one-off **Consolidate Mochie Packed Maps in Scene** tool and its shortcut in the packer. Automatic sharing of matching outputs within each packing batch and cleanup of obsolete source references remain available.

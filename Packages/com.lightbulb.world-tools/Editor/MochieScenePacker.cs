@@ -55,12 +55,12 @@ namespace Lightbulb.WorldTools
                 if (reason != null) { preview.Notes.Add(material.name + ": " + reason); continue; }
                 try
                 {
-                    bool primary = Eligible(material, false);
-                    bool detail = includeDetail && material.shader.name == "Mochie/Standard" && Eligible(material, true);
+                    bool primary = Eligible(material, false, preview.Notes);
+                    bool detail = includeDetail && material.shader.name == "Mochie/Standard" && Eligible(material, true, preview.Notes);
                     bool cleanupPrimary = CleanupEligible(material, false, preview.Notes);
                     bool cleanupDetail = includeDetail && material.shader.name == "Mochie/Standard" && CleanupEligible(material, true, preview.Notes);
                     if (!primary && !detail && !cleanupPrimary && !cleanupDetail)
-                    { preview.Notes.Add(material.name + ": no separate maps to pack or safe leftover references to clear"); continue; }
+                    { preview.Notes.Add(material.name + ": no eligible packing or cleanup actions"); continue; }
                     var entry = new Entry { Material = material, Primary = primary, Detail = detail,
                         CleanupPrimary = cleanupPrimary, CleanupDetail = cleanupDetail, State = EditorJsonUtility.ToJson(material) };
                     foreach (bool isDetail in new[] { false, true })
@@ -91,7 +91,7 @@ namespace Lightbulb.WorldTools
             return preview;
         }
 
-        private static bool Eligible(Material material, bool detail)
+        private static bool Eligible(Material material, bool detail, List<string> notes = null)
         {
             string prefix = detail ? "_Detail" : "_";
             string workflow = detail ? "_DetailWorkflow" : "_PrimaryWorkflow";
@@ -100,7 +100,13 @@ namespace Lightbulb.WorldTools
             if (!detail) required = required.Concat(new[] { "_HeightStrength", "_HeightChannel", "_PackedHeight", "_PackedMetallicStrength", "_PackedRoughnessStrength", "_PackedOcclusionStrength" });
             foreach (string property in required)
                 if (!material.HasProperty(property)) throw new InvalidOperationException("Unsupported Mochie property layout: " + property);
-            return material.GetFloat(workflow) == 0 && Maps(detail).Any(p => material.GetTexture(p) != null);
+            if (material.GetFloat(workflow) != 0) return false;
+            // Multiple slots referencing one texture still consume only one source texture.
+            // Primary and detail each produce their own output, so count them independently.
+            int sources = Maps(detail).Select(material.GetTexture).Where(t => t != null).Distinct().Take(2).Count();
+            if (sources == 1) notes?.Add(material.name + (detail ? ": detail" : ": primary") +
+                " packing skipped: only one distinct source texture; at least two are required.");
+            return sources >= 2;
         }
 
         private static bool CleanupEligible(Material material, bool detail, List<string> notes)
