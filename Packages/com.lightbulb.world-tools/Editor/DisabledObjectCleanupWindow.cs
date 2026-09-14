@@ -33,41 +33,40 @@ namespace Lightbulb.WorldTools
 
         private void OnGUI()
         {
-            EditorGUILayout.HelpBox("Finds explicitly disabled branches in the active scene with no detected external references. " +
-                "EditorOnly excludes the whole branch from builds. Runtime name/tag lookups and custom code cannot be proven unused; " +
-                "exclude anything you intend to activate that way. No objects are deleted.", MessageType.Warning);
+            EditorGUILayout.LabelField("Disabled objects with no known references", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Marking EditorOnly excludes the object and its children from builds. Exclude objects your scripts find by name or tag.",
+                EditorStyles.wordWrappedMiniLabel);
             using (new EditorGUI.DisabledScope(!MaterialTextureBatch.IsIdle))
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Scan active scene")) Run(() => { scan = null; scan = DisabledObjectCleanup.Collect(Progress); message = null; });
-                    if (GUILayout.Button("Select candidates") && scan != null) foreach (var entry in scan.Entries) entry.Included = entry.Candidate;
-                    if (GUILayout.Button("Select none") && scan != null) foreach (var entry in scan.Entries) entry.Included = false;
+                    if (GUILayout.Button("Select all") && scan != null) foreach (var entry in scan.Candidates) entry.Included = true;
+                    if (GUILayout.Button("Select none") && scan != null) foreach (var entry in scan.Candidates) entry.Included = false;
                 }
                 filter = EditorGUILayout.TextField("Filter results", filter);
                 if (scan != null)
                 {
-                    EditorGUILayout.LabelField($"{scan.Scene.name}: {scan.Entries.Count} disabled branches | " +
-                        $"{scan.Entries.Count(e => e.Candidate)} candidates | {scan.Entries.Count(e => e.Included)} selected");
+                    var candidates = scan.Candidates.ToList();
+                    if (scan.Uncertainties.Count > 0)
+                        EditorGUILayout.HelpBox("Could not finish checking references. Fix these scan issues and scan again:\n\n" +
+                            string.Join("\n", scan.Uncertainties), MessageType.Warning);
+                    else
+                        EditorGUILayout.LabelField($"{candidates.Count} unreferenced disabled objects | {candidates.Count(e => e.Included)} selected");
                     scroll = EditorGUILayout.BeginScrollView(scroll);
-                    foreach (string issue in scan.Uncertainties) EditorGUILayout.HelpBox(issue, MessageType.Warning);
-                    foreach (var entry in scan.Entries)
+                    if (scan.Uncertainties.Count == 0 && candidates.Count == 0)
+                        EditorGUILayout.LabelField("No unreferenced disabled objects found.", EditorStyles.wordWrappedLabel);
+                    foreach (var entry in candidates)
                     {
-                        if (entry.Object == null || SceneReferenceScan.Describe(entry.Object).IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                        if (SceneReferenceScan.Describe(entry.Object).IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        using (new EditorGUILayout.HorizontalScope())
                         {
-                            using (new EditorGUILayout.HorizontalScope())
-                            {
-                                using (new EditorGUI.DisabledScope(!entry.Candidate)) entry.Included = EditorGUILayout.Toggle(entry.Included, GUILayout.Width(18));
-                                EditorGUILayout.ObjectField(entry.Object, typeof(GameObject), true);
-                            }
-                            EditorGUILayout.LabelField(SceneReferenceScan.Describe(entry.Object), EditorStyles.wordWrappedMiniLabel);
-                            EditorGUILayout.LabelField(entry.Candidate ? "No detected external references (including descendants)." :
-                                string.Join("\n", entry.Reasons.Distinct()), EditorStyles.wordWrappedLabel);
+                            entry.Included = EditorGUILayout.Toggle(entry.Included, GUILayout.Width(18));
+                            EditorGUILayout.ObjectField(entry.Object, typeof(GameObject), true);
                         }
                     }
                     EditorGUILayout.EndScrollView();
-                    using (new EditorGUI.DisabledScope(!scan.Entries.Any(e => e.Included && e.Candidate)))
+                    using (new EditorGUI.DisabledScope(!candidates.Any(e => e.Included)))
                         if (GUILayout.Button("Mark selected EditorOnly")) Run(() =>
                         {
                             var applied = DisabledObjectCleanup.Apply(scan, Progress);

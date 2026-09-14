@@ -24,6 +24,7 @@ namespace Lightbulb.WorldTools
             internal Scene Scene;
             internal readonly List<Entry> Entries = new List<Entry>();
             internal readonly List<string> Uncertainties = new List<string>();
+            internal IEnumerable<Entry> Candidates => Entries.Where(e => e.Object != null && e.Candidate);
         }
 
         [Serializable]

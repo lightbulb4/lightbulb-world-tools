@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.14 - 2026-09-14
+
+- Simplified **Find Unreferenced Disabled Objects** to show only eligible disabled objects, selected by default, in compact rows. Referenced objects and verbose per-object explanations are hidden. Genuine scan issues appear once above the results; incomplete scans remain blocked.
+- Fixed video-player `VRCUrl` values and URL arrays incorrectly making reference scans incomplete. Inspects the native SDK URL wrapper's fields without treating ordinary URLs as unknown object-reference containers.
+- Passed 15 scene-cleanup EditMode tests, including native SDK scalar/array URL cases, candidate-only results, referenced-object exclusion, and incomplete-scan protection.
+
 ## 0.1.13 - 2026-09-14
 
 - Added **Scene Texture Crunch Compression**: scan active-scene texture dependencies, preview/exclude textures, enable Crunch with a 0–100 quality slider or disable it. Preserves resolution, updates supported Default/platform settings, backs up import metadata, and checks for stale references/settings.

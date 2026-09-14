@@ -232,7 +232,9 @@ namespace Lightbulb.WorldTools
             Type type = value.GetType();
             if (value is string || type.IsPrimitive || type.IsEnum || value is decimal) return;
             if (!visited.Add(value)) return;
-            if (type.IsValueType)
+            // SDK VRCUrl is a string wrapper, not an opaque reference container.
+            // Inspect its actual fields so a future SDK adding an object reference still gets scanned.
+            if (type.IsValueType || (type.FullName == "VRC.SDKBase.VRCUrl" && type.BaseType == typeof(object)))
             {
                 foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                     ReadUdonValue(field.GetValue(value), path + "." + field.Name, reference, visited);

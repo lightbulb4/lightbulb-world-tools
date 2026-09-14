@@ -174,6 +174,7 @@ namespace Lightbulb.WorldTools.Tests
             var scan = DisabledObjectCleanup.Collect();
             Assert.That(scan.Uncertainties.Any(s => s.Contains("Missing script")), Is.True);
             Assert.That(Entry(scan, target).Candidate, Is.False);
+            Assert.That(scan.Candidates, Is.Empty, "An incomplete scan must not show unverified objects as cleanup results.");
         }
 
         [Test]
@@ -221,6 +222,41 @@ namespace Lightbulb.WorldTools.Tests
             var scan = DisabledObjectCleanup.Collect();
             Assert.That(scan.Uncertainties, Is.Empty);
             Assert.That(Entry(scan, target).Reasons.Any(r => r.Contains("Udon variable: Targets[0]")), Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void VideoPlayerUrlsDoNotBlockUnreferencedResults(bool array)
+        {
+            Type udonType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.Udon.UdonBehaviour")).First(t => t != null);
+            Type urlType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.SDKBase.VRCUrl")).First(t => t != null);
+            Type generic = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.Udon.Common.UdonVariable`1")).First(t => t != null);
+            var udon = Go("Sync Video Player").AddComponent(udonType);
+            object table = udonType.GetField("publicVariables").GetValue(udon);
+            var contract = table.GetType().GetInterfaces().First(t => t.Name == "IUdonVariableTable");
+            object url = Activator.CreateInstance(urlType, "https://example.com/video.mp4");
+            Type valueType = urlType;
+            if (array)
+            {
+                Array urls = Array.CreateInstance(urlType, 2);
+                urls.SetValue(url, 0);
+                url = urls;
+                valueType = urlType.MakeArrayType();
+            }
+            object variable = Activator.CreateInstance(generic.MakeGenericType(valueType), "defaultUrl", url);
+            Assert.That(contract.GetMethod("TryAddVariable").Invoke(table, new[] { variable }), Is.True);
+
+            var referenced = Go("Referenced", false);
+            var unreferenced = Go("Unreferenced", false);
+            Go("Reference holder").AddComponent<SceneScanFixture>().References = new Object[] { referenced };
+            Go("Active unreferenced");
+            var scan = DisabledObjectCleanup.Collect();
+            Assert.That(scan.Uncertainties, Is.Empty);
+            Assert.That(scan.Candidates.Select(e => e.Object), Is.EquivalentTo(new[] { unreferenced }));
+            Assert.That(scan.Candidates.Single().Included, Is.True);
+            DisabledObjectCleanup.Apply(scan);
+            Assert.That(unreferenced.tag, Is.EqualTo("EditorOnly"));
+            Assert.That(referenced.tag, Is.EqualTo("Untagged"));
         }
 
         [Test]
