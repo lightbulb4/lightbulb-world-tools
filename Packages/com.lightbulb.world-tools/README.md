@@ -1,5 +1,20 @@
 # Lightbulb World Tools
 
+## Mochie Baked Specular
+
+**Tools > Lightbulb > Mochie Baked Specular** adds approximate baked highlights for Dominant Direction to the verified Mochie Standard / Standard Lite v2.13 source. Keep the material's **Bakery Mode = None** for Dominant Direction. The tool does not change bake mode or rebake the scene.
+
+1. **Check installed Mochie**, then **Install patch**. This modifies only a recognized `Assets/.../StandardLighting.cginc`, retaining a byte-for-byte backup under `Library/LightbulbWorldTools/MochieSpecular/`. It uses the existing lightmap samples and Bakery Specular Highlights toggle/strength; no new lightmap textures, draw passes or shader/material copies are needed. Existing enabled toggles gain the new behavior immediately.
+2. Optionally enable **Reapply after compatible updates**. This per-project setting is off by default. Source hashes (line-ending independent) guard the lighting and BRDF integration; changes to those files require review, even if a new release looks similar. Unchanged compatible files are automatically patched again after import. Unknown/native implementations are not guessed at or overwritten. An opted-in project's build is blocked if the patch is missing/incompatible; batch builds never rewrite the source.
+3. **Scan active scene**. Only renderer-assigned Standard / Standard Lite materials with compatible baked data are candidates, including inactive renderers. Existing SH/RNM/MonoSH materials can use their native baked-specular support. Package-owned, embedded, read-only, already-enabled and zero-strength materials are skipped. Terrain and runtime/script-only material swaps are outside this tool's scope.
+4. Review the material checkboxes and **Enable baked highlights**. Recommended selections have scalar roughness from 0.1 up to (but not including) 0.9. Textured/packed/detail/rain roughness, near-mirror or very rough surfaces, transparent materials and deliberately disabled regular highlights need manual review. These are recommendations, not a claim that roughness alone determines reflectivity. Zero roughness is a smooth reflective surface; nonmetals reflect light too. Texture pixels and animations are not analyzed. **All eligible** includes review cases.
+
+Only the Bakery Specular Highlights property and keyword are changed. Strength, regular specular, environment reflections, metallic, roughness and Bakery Mode are preserved. Shared material changes affect all their other uses; Undo restores the changes. The tool does not automatically save material assets. Changed material or renderer/lightmap assignments invalidate the preview.
+
+**Remove patch** disables auto-reapplication and removes only the exact Lightbulb block; unrelated source edits remain. Remove it **before uninstalling World Tools**. Shader-source changes are not Unity Undo operations. Backups in Library are local recovery copies and can be lost when Library is cleared; keep normal source control/backups too. Unknown or edited patch blocks require manual review, not restoring an old whole-file backup over a newer shader.
+
+The new highlights use a single dominant direction, not separate lights. They can look harsh on smooth surfaces; test representative materials in VR before enabling broadly. There is extra per-pixel shader math when enabled, but no runtime editor-tool cost. The patch is limited to static directional lightmaps, leaves the existing diffuse decode unchanged, and does not extend Mochie Mobile, Uber, or dynamic GI.
+
 Small Unity editor diagnostics and repairs for world projects. Diagnostics report to Unity's Console; texture batching has a preview window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
 
 Open the commands directly under **Tools > Lightbulb**.
