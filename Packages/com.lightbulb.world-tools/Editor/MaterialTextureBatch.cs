@@ -23,6 +23,7 @@ namespace Lightbulb.WorldTools
             internal Texture Texture;
             internal string ImporterState;
             internal bool Included = true;
+            internal bool ExcludedByCrunchFilter;
             internal readonly List<string> Uses = new List<string>();
             internal readonly List<string> Notes = new List<string>();
             internal readonly List<TextureImporterPlatformSettings> Changes = new List<TextureImporterPlatformSettings>();
@@ -76,9 +77,11 @@ namespace Lightbulb.WorldTools
             return entries.Values.OrderBy(e => e.Path, StringComparer.Ordinal).ToList();
         }
 
-        internal static List<Entry> CollectTextures(IEnumerable<Texture> textures, CrunchMode crunch, int quality)
+        internal static List<Entry> CollectTextures(IEnumerable<Texture> textures, CrunchMode crunch, int quality, bool onlyWithoutCrunch = false)
         {
             if (quality < 0 || quality > 100) throw new ArgumentOutOfRangeException(nameof(quality));
+            if (onlyWithoutCrunch && crunch != CrunchMode.Enable)
+                throw new ArgumentException("The Crunch-off filter is only available when enabling Crunch.", nameof(onlyWithoutCrunch));
             var entries = textures.Where(t => t != null).Distinct().Select(t => new Entry
             {
                 Texture = t, Path = AssetDatabase.GetAssetPath(t)
@@ -86,14 +89,14 @@ namespace Lightbulb.WorldTools
                 .Select(g => g.First()).OrderBy(e => e.Path, StringComparer.Ordinal).ToList();
             foreach (Entry entry in entries)
             {
-                try { Plan(entry, 0, crunch, quality); }
+                try { Plan(entry, 0, crunch, quality, onlyWithoutCrunch); }
                 catch (Exception ex) { entry.Changes.Clear(); entry.Notes.Add("Skipped: " + ex.Message); }
                 entry.Included = entry.Changes.Count > 0;
             }
             return entries;
         }
 
-        private static void Plan(Entry entry, int maximum, CrunchMode crunch, int? quality = null)
+        private static void Plan(Entry entry, int maximum, CrunchMode crunch, int? quality = null, bool onlyWithoutCrunch = false)
         {
             var importer = AssetImporter.GetAtPath(entry.Path) as TextureImporter;
             if (!(entry.Texture is Texture2D) || importer == null ||
@@ -109,13 +112,20 @@ namespace Lightbulb.WorldTools
             }
             entry.Guid = AssetDatabase.AssetPathToGUID(entry.Path);
             entry.ImporterState = EditorJsonUtility.ToJson(importer);
+            List<TextureImporterPlatformSettings> platforms = Platforms(importer);
+            if (onlyWithoutCrunch && platforms.Any(s => s.crunchedCompression || PlainFormat(s.format) != s.format))
+            {
+                entry.ExcludedByCrunchFilter = true;
+                entry.Notes.Add("Already uses Crunch; excluded by filter.");
+                return;
+            }
             importer.GetSourceTextureWidthAndHeight(out int width, out int height);
             if (width <= 0 || height <= 0) throw new InvalidOperationException("Cannot determine source dimensions.");
             entry.Notes.Add($"Source {width} x {height}; imported {entry.Texture.width} x {entry.Texture.height}");
 
-            foreach (TextureImporterPlatformSettings settings in Platforms(importer))
+            foreach (TextureImporterPlatformSettings settings in platforms)
             {
-                string label = settings.name == "DefaultTexturePlatform" ? "Default" : settings.name;
+                string label = settings.name == "DefaultTexturePlatform" ? "Default platform" : settings.name;
                 bool changed = false;
                 // A small original or an already lower cap needs no size-setting change.
                 if (maximum > 0 && Math.Max(width, height) > maximum && settings.maxTextureSize > maximum)
@@ -164,6 +174,8 @@ namespace Lightbulb.WorldTools
             bool enable = mode == CrunchMode.Enable;
             TextureImporterFormat format = settings.format;
             TextureImporterFormat plain = PlainFormat(format);
+            bool wasEnabled = settings.crunchedCompression || plain != format;
+            int previousQuality = settings.compressionQuality;
             if (enable)
             {
                 if (format == TextureImporterFormat.Automatic)
@@ -193,13 +205,20 @@ namespace Lightbulb.WorldTools
             settings.crunchedCompression = enable;
             if (enable && quality.HasValue && settings.compressionQuality != quality.Value)
             {
-                notes.Add($"{label}: Crunch quality {settings.compressionQuality} -> {quality.Value}");
                 settings.compressionQuality = quality.Value;
                 changed = true;
             }
-            if (changed) notes.Add(label + ": Crunch " + (enable ? "on" : "off") +
-                (settings.format != format ? $" ({format} -> {settings.format})" : "") +
-                (enable && format == TextureImporterFormat.Automatic ? " (Automatic: where supported by Unity)" : ""));
+            if (changed)
+            {
+                string state = wasEnabled == enable ? "Crunch stays " + (enable ? "ON" : "OFF") :
+                    "Crunch " + (wasEnabled ? "ON" : "OFF") + " → " + (enable ? "ON" : "OFF");
+                string qualityChange = !enable ? "" : " · Quality: " +
+                    (wasEnabled && previousQuality != settings.compressionQuality ? previousQuality + " → " : "") +
+                    settings.compressionQuality;
+                notes.Add(label + ": " + state + qualityChange +
+                    (settings.format != format ? $" · Format: {format} → {settings.format}" : "") +
+                    (enable && format == TextureImporterFormat.Automatic ? " (Automatic: where supported by Unity)" : ""));
+            }
             return changed;
         }
 

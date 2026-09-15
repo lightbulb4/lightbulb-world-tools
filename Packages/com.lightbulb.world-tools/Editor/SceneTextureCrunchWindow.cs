@@ -11,6 +11,7 @@ namespace Lightbulb.WorldTools
     {
         [SerializeField] private bool enable = true;
         [SerializeField] private int quality = 50;
+        [SerializeField] private bool onlyWithoutCrunch;
         private Scene scene;
         private List<MaterialTextureBatch.Entry> entries = new List<MaterialTextureBatch.Entry>();
         private string message;
@@ -39,7 +40,7 @@ namespace Lightbulb.WorldTools
             scene = SceneMaterials.Active();
             var found = Discover();
             entries = MaterialTextureBatch.CollectTextures(found.Objects.OfType<Texture>(),
-                enable ? MaterialTextureBatch.CrunchMode.Enable : MaterialTextureBatch.CrunchMode.Disable, quality);
+                enable ? MaterialTextureBatch.CrunchMode.Enable : MaterialTextureBatch.CrunchMode.Disable, quality, enable && onlyWithoutCrunch);
             hasPreview = true;
             message = found.Uncertainties.Count == 0 ? null : "Some dependencies could not be inspected:\n" + string.Join("\n", found.Uncertainties);
         }
@@ -75,7 +76,14 @@ namespace Lightbulb.WorldTools
             {
                 EditorGUI.BeginChangeCheck();
                 enable = EditorGUILayout.Popup("Crunch compression", enable ? 0 : 1, new[] { "Enable", "Disable" }) == 0;
-                if (enable) quality = EditorGUILayout.IntSlider("Crunch quality", quality, 0, 100);
+                if (enable)
+                {
+                    onlyWithoutCrunch = EditorGUILayout.Toggle("Crunch currently off only", onlyWithoutCrunch);
+                    quality = EditorGUILayout.IntSlider("Crunch quality", quality, 0, 100);
+                    if (onlyWithoutCrunch)
+                        EditorGUILayout.LabelField("Only enable textures with Crunch off in Default and all enabled platform overrides. Existing Crunch qualities are left alone.",
+                            EditorStyles.wordWrappedMiniLabel);
+                }
                 if (EditorGUI.EndChangeCheck()) { entries.Clear(); hasPreview = false; message = "Settings changed. Scan again to preview."; }
                 EditorGUILayout.LabelField("Higher quality means larger files and longer imports. Crunch reduces download size, not VRAM. " +
                     "Resolution is preserved. Default and existing enabled platform overrides are updated where supported.", EditorStyles.wordWrappedMiniLabel);
@@ -89,9 +97,14 @@ namespace Lightbulb.WorldTools
                 var changing = entries.Where(e => e.Changes.Count > 0).ToList();
                 var skipped = entries.Where(e => e.Changes.Count == 0 && e.Notes.Any(IsSkipNote)).ToList();
                 int count = changing.Count(e => e.Included);
+                int filtered = entries.Count(e => e.ExcludedByCrunchFilter);
                 if (hasPreview)
+                {
+                    EditorGUILayout.LabelField("Proposed changes — not applied yet", EditorStyles.boldLabel);
                     EditorGUILayout.LabelField($"{changing.Count} textures need changes | {count} selected | " +
-                        $"{entries.Count - changing.Count - skipped.Count} already match | {skipped.Count} skipped");
+                        $"{entries.Count - changing.Count - skipped.Count - filtered} already match | {skipped.Count} skipped" +
+                        (enable && onlyWithoutCrunch ? $" | {filtered} already use Crunch" : ""));
+                }
                 scroll = EditorGUILayout.BeginScrollView(scroll);
                 if (hasPreview && changing.Count == 0)
                     EditorGUILayout.LabelField("No texture changes to apply.", EditorStyles.wordWrappedLabel);
