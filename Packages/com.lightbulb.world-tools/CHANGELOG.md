@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Renamed Lighting Experiment to **Bakery LV3 Swapper**, preserving existing scene component identities and generated folder paths.
+- File repairs share one original backup per asset; repeated operations reuse the oldest available original. Added **Clean Up Tool Files** with a preview of redundant legacy backups and retained originals.
+- Added manual unused packed-output and finished swapper-file cleanup with project reference checks, stale-preview protection, and explicit scene-backup removal.
+- UV Viewer uses temporary editor materials instead of generating Resources assets; legacy helper files can be reviewed for cleanup.
+
 - Added **Mochie Baked Specular**: a reversible, source-checked Dominant Direction specular patch for Mochie Standard / Standard Lite, with opt-in reapplication after compatible updates and a build check for overwritten patches.
 - Added a scene-material preview to enable Bakery Specular Highlights with Undo. Requires existing compatible baked data; preserves material strengths, bake modes, roughness and metallic. Recommends moderate scalar roughness and leaves textured/very smooth/rough cases for review instead of treating zero roughness or zero metallic as non-reflective.
 

@@ -110,6 +110,7 @@ namespace B83.UVViewer
 
         void OnDisable()
         {
+            Drawing.ReleaseMaterials();
             SceneView.duringSceneGui -= OnSceneGUI;
             // pre 2019
             // SceneView.onSceneGUIDelegate -= OnSceneGUI;
@@ -917,84 +918,30 @@ namespace B83.UVViewer
         private static Material m_LineMatDepthTest = null;
         public static Material m_ActiveMaterial = null;
 
-        public static Material LineMat
+        static Drawing()
         {
-            get
-            {
-                if (m_LineMat == null)
-                {
-                    m_LineMat = Resources.Load<Material>("Lines_Colored_Blended");
-#if UNITY_EDITOR
-                    if (m_LineMat == null)
-                    {
-                        var resDir = new System.IO.DirectoryInfo(System.IO.Path.Combine(Application.dataPath, "Resources"));
-                        if (!resDir.Exists)
-                            resDir.Create();
-                        Shader s = Shader.Find("Lines/Colored Blended");
-                        if (s == null)
-                        {
-                            string shaderText = "Shader \"Lines/Colored Blended\" {" +
-                                                "SubShader { Pass {" +
-                                                "	BindChannels { Bind \"Color\",color }" +
-                                                "	Blend SrcAlpha OneMinusSrcAlpha" +
-                                                "	ZWrite On Cull Back ZTest Always Fog { Mode Off }" +
-                                                "} } }";
-                            string path = System.IO.Path.Combine(resDir.FullName, "Lines_Colored_Blended.shader");
-                            Debug.Log("Shader missing, create asset: " + path);
-                            System.IO.File.WriteAllText(path, shaderText);
-                            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-                            AssetDatabase.LoadAssetAtPath<Shader>("Resources/Lines_Colored_Blended.shader");
-                            s = Shader.Find("Lines/Colored Blended");
-                        }
-                        var mat = new Material(s);
-                        mat.name = "Lines/Colored Blended";
-                        AssetDatabase.CreateAsset(mat, "Assets/Resources/Lines_Colored_Blended.mat");
-                        m_LineMat = mat;
-                    }
-#endif
-                }
-                return m_LineMat;
-            }
+            AssemblyReloadEvents.beforeAssemblyReload += ReleaseMaterials;
+            EditorApplication.quitting += ReleaseMaterials;
         }
-
-        public static Material LineMatDepthTest
+        public static Material LineMat => m_LineMat != null ? m_LineMat : (m_LineMat = CreateLineMaterial(false));
+        public static Material LineMatDepthTest => m_LineMatDepthTest != null ? m_LineMatDepthTest : (m_LineMatDepthTest = CreateLineMaterial(true));
+        static Material CreateLineMaterial(bool depth)
         {
-            get
-            {
-                if (m_LineMatDepthTest == null)
-                {
-                    m_LineMatDepthTest = Resources.Load<Material>("Lines_Colored_Blended_Depth");
-#if UNITY_EDITOR
-                    if (m_LineMatDepthTest == null)
-                    {
-                        var resDir = new System.IO.DirectoryInfo(System.IO.Path.Combine(Application.dataPath, "Resources"));
-                        if (!resDir.Exists)
-                            resDir.Create();
-                        Shader s = Shader.Find("Lines/Colored Blended with DepthTest");
-                        if (s == null)
-                        {
-                            string shaderText = "Shader \"Lines/Colored Blended with DepthTest\" {" +
-                                           "SubShader { Pass {" +
-                                           "	BindChannels { Bind \"Color\",color }" +
-                                           "	Blend SrcAlpha OneMinusSrcAlpha" +
-                                           "	ZWrite On Cull Back ZTest LEqual Fog { Mode Off }" +
-                                           "} } }";
-                            string path = System.IO.Path.Combine(resDir.FullName, "Lines_Colored_Blended_Depth.shader");
-                            Debug.Log("Shader missing, create asset: " + path);
-                            System.IO.File.WriteAllText(path, shaderText);
-                            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-                            AssetDatabase.LoadAssetAtPath<Shader>("Resources/Lines_Colored_Blended_Depth.shader");
-                            s = Shader.Find("Lines/Colored Blended with DepthTest");
-                        }
-                        var mat = new Material(s);
-                        mat.name = "Lines/Colored Blended with DepthTest";
-                        AssetDatabase.CreateAsset(mat, "Assets/Resources/Lines_Colored_Blended_Depth.mat");
-                        m_LineMatDepthTest = mat;
-                    }
-#endif
-                }
-                return m_LineMatDepthTest;
-            }
+            var shader = Shader.Find("Hidden/Internal-Colored");
+            if (shader == null) throw new System.InvalidOperationException("Unity's editor line shader is missing.");
+            var material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
+            material.SetInt("_ZWrite", 1);
+            material.SetInt("_ZTest", (int)(depth ? UnityEngine.Rendering.CompareFunction.LessEqual : UnityEngine.Rendering.CompareFunction.Always));
+            return material;
+        }
+        public static void ReleaseMaterials()
+        {
+            if (m_LineMat != null) UnityEngine.Object.DestroyImmediate(m_LineMat);
+            if (m_LineMatDepthTest != null) UnityEngine.Object.DestroyImmediate(m_LineMatDepthTest);
+            m_LineMat = m_LineMatDepthTest = m_ActiveMaterial = null;
         }
 
         public static void GUIViewport(Rect aR)

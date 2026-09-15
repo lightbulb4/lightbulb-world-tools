@@ -287,17 +287,12 @@ namespace Lightbulb.WorldTools
             if (selected.Count == 0) return result;
             // Refuse a stale preview before making any changes or backups.
             foreach (Entry entry in selected) Revalidate(entry);
-            result.BackupRoot = Path.GetFullPath(Path.Combine("Library", "LightbulbWorldTools", "Backups",
-                "MaterialTextures", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")));
-            foreach (Entry entry in selected)
-            {
-                string backup = Path.Combine(result.BackupRoot, entry.Path + ".meta");
-                Directory.CreateDirectory(Path.GetDirectoryName(backup));
-                File.Copy(entry.Path + ".meta", backup, false);
-            }
+            result.BackupRoot = Path.GetFullPath(ToolBackups.Root);
+            var originals = ToolBackups.Inventory();
+            foreach (Entry entry in selected) ToolBackups.Preserve(entry.Path + ".meta", inventory: originals);
             Debug.Log("[Lightbulb] Original texture metadata backups: " + result.BackupRoot +
                 "\nTo restore, close Unity and copy these .meta files to their matching project paths. " +
-                "This restores all import settings, not just size/Crunch. Deleting Library removes the backups.");
+                "One original per asset is retained across tools and runs. Use Tools > Lightbulb > Clean Up Tool Files to locate it. This restores all import settings, not just size/Crunch. Deleting Library removes the backups.");
 
             for (int i = 0; i < selected.Count; i++)
             {

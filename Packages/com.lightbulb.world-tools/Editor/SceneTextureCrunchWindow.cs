@@ -136,7 +136,7 @@ namespace Lightbulb.WorldTools
                 EditorGUILayout.EndScrollView();
                 using (new EditorGUI.DisabledScope(count == 0))
                     if (GUILayout.Button($"Apply to {count} textures")) Run(Apply);
-                EditorGUILayout.LabelField("Original images are untouched. Import settings are backed up under Library/LightbulbWorldTools/Backups/MaterialTextures. " +
+                EditorGUILayout.LabelField("Original images are untouched. The first original import settings per texture are retained under Library/LightbulbWorldTools. " +
                     "Restore by closing Unity and copying the backup .meta files to matching project paths. This is not Unity Undo.", EditorStyles.wordWrappedMiniLabel);
             }
             if (!string.IsNullOrEmpty(message)) EditorGUILayout.HelpBox(message, MessageType.Info);

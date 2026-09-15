@@ -4,7 +4,7 @@
 
 **Tools > Lightbulb > Mochie Baked Specular** adds approximate baked highlights for Dominant Direction to the verified Mochie Standard / Standard Lite v2.13 source. Keep the material's **Bakery Mode = None** for Dominant Direction. The tool does not change bake mode or rebake the scene.
 
-1. **Check installed Mochie**, then **Install patch**. This modifies only a recognized `Assets/.../StandardLighting.cginc`, retaining a byte-for-byte backup under `Library/LightbulbWorldTools/MochieSpecular/`. It uses the existing lightmap samples and Bakery Specular Highlights toggle/strength; no new lightmap textures, draw passes or shader/material copies are needed. Existing enabled toggles gain the new behavior immediately.
+1. **Check installed Mochie**, then **Install patch**. This modifies only a recognized `Assets/.../StandardLighting.cginc`, retaining a byte-for-byte backup under `Library/LightbulbWorldTools/`. It uses the existing lightmap samples and Bakery Specular Highlights toggle/strength; no new lightmap textures, draw passes or shader/material copies are needed. Existing enabled toggles gain the new behavior immediately.
 2. Optionally enable **Reapply after compatible updates**. This per-project setting is off by default. Source hashes (line-ending independent) guard the lighting and BRDF integration; changes to those files require review, even if a new release looks similar. Unchanged compatible files are automatically patched again after import. Unknown/native implementations are not guessed at or overwritten. An opted-in project's build is blocked if the patch is missing/incompatible; batch builds never rewrite the source.
 3. **Scan active scene**. Only renderer-assigned Standard / Standard Lite materials with compatible baked data are candidates, including inactive renderers. Existing SH/RNM/MonoSH materials can use their native baked-specular support. Package-owned, embedded, read-only, already-enabled and zero-strength materials are skipped. Terrain and runtime/script-only material swaps are outside this tool's scope.
 4. Review the material checkboxes and **Enable baked highlights**. Recommended selections have scalar roughness from 0.1 up to (but not including) 0.9. Textured/packed/detail/rain roughness, near-mirror or very rough surfaces, transparent materials and deliberately disabled regular highlights need manual review. These are recommendations, not a claim that roughness alone determines reflectivity. Zero roughness is a smooth reflective surface; nonmetals reflect light too. Texture pixels and animations are not analyzed. **All eligible** includes review cases.
@@ -14,6 +14,18 @@ Only the Bakery Specular Highlights property and keyword are changed. Strength, 
 **Remove patch** disables auto-reapplication and removes only the exact Lightbulb block; unrelated source edits remain. Remove it **before uninstalling World Tools**. Shader-source changes are not Unity Undo operations. Backups in Library are local recovery copies and can be lost when Library is cleared; keep normal source control/backups too. Unknown or edited patch blocks require manual review, not restoring an old whole-file backup over a newer shader.
 
 The new highlights use a single dominant direction, not separate lights. They can look harsh on smooth surfaces; test representative materials in VR before enabling broadly. There is extra per-pixel shader math when enabled, but no runtime editor-tool cost. The patch is limited to static directional lightmaps, leaves the existing diffuse decode unchanged, and does not extend Mochie Mobile, Uber, or dynamic GI.
+
+## Backup retention and file cleanup
+
+**Tools > Lightbulb > Clean Up Tool Files** previews redundant backups and unused generated assets before deletion. Backups are shared across tools: the first available original is retained per asset, including texture metadata across Crunch, resizing and the Mochie linear-texture fix. Repeated changes and shader patch install/remove cycles reuse it. Existing run folders are recognized; their earliest available backup is reused without creating another copy. The cleanup preview shows which original is kept and exactly which later copies can be deleted. Ambiguous old Mochie shader backups are retained.
+
+New originals live under `Library/LightbulbWorldTools/Originals/<asset identity>/`; `source.txt` records the original project-relative destination. Existing originals can remain in their old folders. Expand **Original backups kept** to locate each file. To restore, close Unity and copy the retained file to its source asset's current path (for renamed textures, match the GUID). This restores the starting settings, not the previous operation. Library backups are not Unity Undo and disappear when Library is cleared.
+
+Packed outputs created by this version are labeled for cleanup. **Include older packed filenames for manual review** also finds legacy `_Packed` PNG names, unchecked by default because names alone cannot prove ownership. Original source textures are not automatically removed. The active scene's finished swapper folder can be cleaned; active setups and referenced materials are retained. Its scene backup is kept unless **Remove the finished swapper's pre-swap scene backup** is selected. Open each finished setup's scene to clean its folder.
+
+Deletion checks dependencies across all project assets (including closed scenes and prefabs), string GUID registries, and loaded scene references; it rechecks the selected files immediately before deletion. Files in Resources/StreamingAssets are retained except the explicitly reviewed legacy UV helpers. Script-built/name-based loads cannot be proven absent: review before confirming. Legacy UV helpers are unchecked by default. Save open scenes and close Prefab Mode first. Cleanup does not use Unity Undo; it prunes empty legacy backup directories and empty finished swapper folders only.
+
+UV Viewer now creates hidden, temporary editor materials using Unity's internal line shader and releases them on close/reload. It no longer writes shaders or materials into Assets/Resources. The four old helper paths can be reviewed in the cleanup preview.
 
 Small Unity editor diagnostics and repairs for world projects. Diagnostics report to Unity's Console; texture batching has a preview window. Report rows include an object or material context where possible, so clicking a Console entry selects the relevant asset or GameObject.
 
@@ -31,7 +43,7 @@ Open **Tools > Lightbulb > Scene Texture Crunch Compression**, choose **Enable**
 - **Proposed changes — not applied yet** distinguishes the current state from the action. **Default platform** means the texture's base import settings; named platform overrides are listed separately. Enabling shows **Crunch OFF → ON · Quality: 100**, while changing active compression shows **Crunch stays ON · Quality: 50 → 100**. Unity's stored quality while Crunch is off is not displayed as active compression.
 - **Texture dimensions and maximum-resolution settings are preserved.** Updates Default and every existing enabled platform override; explicit DXT/ETC formats map to/from corresponding Crunch formats. Incompatible formats such as BC7/ASTC, HDR or uncompressed Automatic settings are skipped rather than coerced. Generated textures, lightmap-type imports, cubes, arrays, read-only metadata and non-embedded package assets appear only in the collapsed skipped section.
 - Import settings belong to shared assets: changes also affect other scenes using those textures. Original image files remain untouched. Scene membership and import settings are rechecked before applying. Cancellation stops between textures, leaving completed changes applied.
-- Original `.meta` files are backed up under `Library/LightbulbWorldTools/Backups/MaterialTextures/<run>/`. To restore, close Unity and copy the backed-up files to their matching project paths. This restores all import settings and is **not Unity Undo**; deleting `Library` removes the backups.
+- Original `.meta` files are backed up under `Library/LightbulbWorldTools/`. To restore, close Unity and copy the backed-up files to their matching project paths. This restores all import settings and is **not Unity Undo**; deleting `Library` removes the backups.
 
 ### Find Unreferenced Disabled Objects
 
@@ -55,7 +67,7 @@ Multi-select materials in the **Project** window, then right-click **Materials >
 - Exclude individual textures before applying. The material set stays fixed until you click **Use selected materials**; selecting a texture in the preview does not replace the material set. **Refresh preview** reads current settings again.
 - **Shared textures change everywhere they are used**, including unselected materials and other scenes. Skips generated textures, RenderTextures, cubes, arrays, lightmap-type imports, read-only metadata, and non-embedded package assets.
 - Confirms the operation, refuses stale import-setting previews, reimports each texture once, verifies the requested settings, and reports failures. Cancellation stops between textures; completed changes remain applied.
-- Backs up original `.meta` files under `Library/LightbulbWorldTools/Backups/MaterialTextures/<run>/` before changing anything. The Console prints the location. To restore, close Unity and copy the backed-up `.meta` files to the matching project paths. This restores all import settings, not just size/Crunch; **it is not Unity Undo**. Deleting `Library` removes the backups.
+- Backs up original `.meta` files under `Library/LightbulbWorldTools/` before changing anything. The Console prints the location. To restore, close Unity and copy the backed-up `.meta` files to the matching project paths. This restores all import settings, not just size/Crunch; **it is not Unity Undo**. Deleting `Library` removes the backups.
 
 Crunch targets disk/download size rather than GPU memory. Reducing resolution also reduces GPU memory usage. No textures are changed merely by installing the package or opening the preview.
 
@@ -100,9 +112,9 @@ Open **Tools > Lightbulb > Pack Mochie Materials in Scene**, then **Scan active 
 - The tool validates scene identity, material state, source/packed texture dependency hashes, output assignment/import, and packed keywords. A failed material is restored with its source references; any PNG created before failure remains on disk. Cancellation stops between materials and keeps completed results.
 - **Edit > Undo** restores material settings and cleared references for the batch. It does not delete generated PNGs. Materials are not automatically saved; review the scene and then save the project. Packing and import compression can affect appearance, especially non-grayscale source maps or detail maps using alpha in blending. This is not a guarantee of pixel-identical rendering or reduced build size.
 
-### Lighting Experiment
+### Bakery LV3 Swapper
 
-Open **Tools > Lightbulb > Lighting Experiment** in one saved scene, outside Play Mode. This is an editor authoring workflow: **rebake after changing the setup**. It does not provide an in-game lighting switch or guarantee identical lighting between engines.
+Open **Tools > Lightbulb > Bakery LV3 Swapper** in one saved scene, outside Play Mode. This is an editor authoring workflow: **rebake after changing the setup**. It does not provide an in-game lighting switch or guarantee identical lighting between engines.
 
 Requires installed **VRC Light Volumes 3.0.0-dev.18** and Bakery. The adapter checks the installed types and method contracts; neither dependency is modified or distributed. Older/newer LV versions are refused because registration and baking behavior varies.
 
@@ -136,7 +148,7 @@ Run **Tools > Lightbulb > Fix Mochie Linear Textures in Scene** outside Play Mod
 - Only textures currently marked sRGB are changed. Each unique texture is reimported once. Color maps, normal-map import warnings, Uber, Mobile, and other shader families are outside the scan.
 - Logs the candidate textures and material/property names, then asks for confirmation. **The texture import setting changes everywhere that texture is used**, including other materials and scenes, even if another use is a color slot.
 - Skips textures without a texture importer, read-only metadata, and non-embedded packages. Reports individual reimport failures and verifies that each fixed texture remains linear.
-- Backs up original `.meta` files under `Library/LightbulbWorldTools/Backups/MochieLinearTextures/<run>/`, preserving project-relative paths. The Console prints the location. To roll back, close Unity and copy those `.meta` files to their matching project paths. This restores all import settings to their pre-fix values; it is not Unity Undo. Deleting `Library` removes the backups.
+- Backs up original `.meta` files under `Library/LightbulbWorldTools/`, preserving project-relative paths. The Console prints the location. To roll back, close Unity and copy those `.meta` files to their matching project paths. This restores all import settings to their pre-fix values; it is not Unity Undo. Deleting `Library` removes the backups.
 
 A second run makes no changes when the scene's supported textures are already linear.
 
@@ -170,7 +182,7 @@ Run **Tools > Lightbulb > Fix VideoPlayerShim URL Resolver** outside Play Mode. 
 - Only patches the verified original 1.5.0 resolver in `Packages/dev.architech.videoplayershim`. Recognized previous repairs are left alone. Other versions, custom source, linked folders, and cached/external packages are refused.
 - Passes non-HTTPS URLs directly to the player before starting yt-dlp. HTTPS resolution keeps its existing format options; failed resolver processes stop, and only an HTTP(S) URL from stdout can reach the player.
 - Changes only `Editor/PlayModeUrlResolverShim.cs`, preserving UTF-8 BOM/line-ending style and its `.meta` file. Scenes, player settings, and yt-dlp itself are untouched.
-- Atomically replaces the source with an exact original-file backup under `Library/LightbulbWorldTools/Backups/VideoPlayerShim/`. The Console prints the backup path. To undo, close Unity and copy that backup over the resolver script. This is not Unity Undo; deleting `Library` also deletes these backups.
+- Atomically replaces the source with an exact original-file backup under `Library/LightbulbWorldTools/`. The Console prints the backup path. To undo, close Unity and copy that backup over the resolver script. This is not Unity Undo; deleting `Library` also deletes these backups.
 
 Unity recompiles after a successful repair. Package reinstalls or updates may replace the patched source; rerun the command only if this specific issue returns. This does not repair unrelated yt-dlp or playback errors.
 

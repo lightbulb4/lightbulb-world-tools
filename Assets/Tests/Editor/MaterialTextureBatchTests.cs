@@ -106,7 +106,7 @@ namespace Lightbulb.WorldTools.Tests
             var result = MaterialTextureBatch.Apply(entries);
             Assert.That(result.Changed, Is.EqualTo(1));
             Assert.That(result.Failed, Is.Zero);
-            Assert.That(File.ReadAllBytes(Path.Combine(result.BackupRoot, importer.assetPath + ".meta")), Is.EqualTo(metadata));
+            Assert.That(File.ReadAllBytes(ToolBackups.Preserve(importer.assetPath + ".meta")), Is.EqualTo(metadata));
             Assert.That(File.ReadAllBytes(importer.assetPath), Is.EqualTo(source));
             importer = Importer(texture);
             Assert.That(importer.maxTextureSize, Is.EqualTo(1024));
@@ -121,7 +121,7 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(MaterialTextureBatch.Collect(new[] { material }, 1024,
                 MaterialTextureBatch.CrunchMode.LeaveUnchanged).Single().Changes, Is.Empty);
 
-            File.Copy(Path.Combine(result.BackupRoot, importer.assetPath + ".meta"), importer.assetPath + ".meta", true);
+            File.Copy(ToolBackups.Preserve(importer.assetPath + ".meta"), importer.assetPath + ".meta", true);
             AssetDatabase.ImportAsset(importer.assetPath, ImportAssetOptions.ForceSynchronousImport);
             Assert.That(Importer(texture).maxTextureSize, Is.EqualTo(2048), "Backup restores original settings");
         }

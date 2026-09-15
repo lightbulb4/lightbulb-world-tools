@@ -15,8 +15,8 @@ namespace Lightbulb.WorldTools
         Vector2 scroll;
         LightingExperiment.Preview preview;
         string error;
-        [MenuItem("Tools/Lightbulb/Lighting Experiment")]
-        internal static void Open() => GetWindow<LightingExperimentWindow>("Lighting Experiment").Show();
+        [MenuItem("Tools/Lightbulb/Bakery LV3 Swapper")]
+        internal static void Open() => GetWindow<LightingExperimentWindow>("Bakery LV3 Swapper").Show();
         void OnEnable() { minSize = new Vector2(640, 480); Undo.undoRedoPerformed += Changed; SceneView.duringSceneGui += DrawBounds; }
         void OnDisable() { Undo.undoRedoPerformed -= Changed; SceneView.duringSceneGui -= DrawBounds; }
         void Changed() { preview = null; Repaint(); }
@@ -32,8 +32,9 @@ namespace Lightbulb.WorldTools
             using (var view = new EditorGUILayout.ScrollViewScope(scroll))
             {
                 scroll = view.scrollPosition;
-                EditorGUILayout.LabelField("Lighting Experiment", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Bakery LV3 Swapper", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox("Keep both setups in this scene. Conversion only creates missing counterparts. Mode switches preserve independent edits; rebake after changing lighting. Save the scene to preserve the experiment across restarts.", MessageType.Info);
+                if (GUILayout.Button("Clean up tool files…")) ToolFileCleanupWindow.Open();
                 if (!string.IsNullOrEmpty(error)) EditorGUILayout.HelpBox(error, MessageType.Error);
                 LightingExperimentState state = null;
                 try { state = LightingExperiment.FindState(UnityEngine.SceneManagement.SceneManager.GetActiveScene()); }
@@ -47,7 +48,7 @@ namespace Lightbulb.WorldTools
                         DrawModes(state);
                         EditorGUILayout.HelpBox(state.status, MessageType.Warning);
                         EditorGUILayout.LabelField("Last preset", state.mode.ToString());
-                        if (!string.IsNullOrEmpty(state.backupScene) && GUILayout.Button("Select pre-experiment scene backup")) Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(state.backupScene);
+                        if (!string.IsNullOrEmpty(state.backupScene) && GUILayout.Button("Select pre-swap scene backup")) Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(state.backupScene);
                         DrawRouting(state);
                         showLights = EditorGUILayout.Foldout(showLights, "Lights and inclusion", true);
                         if (showLights) DrawLights(state);
@@ -60,7 +61,7 @@ namespace Lightbulb.WorldTools
                         if (GUILayout.Button("Bake enabled Point Light Volume shadows")) Run(() => LightingExperiment.BakeShadows(state));
                         if (GUILayout.Button("Select Light Volume Manager")) Selection.activeObject = state.manager;
                         GUILayout.Space(10);
-                        EditorGUILayout.LabelField("Finish experiment", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField("Finish setup", EditorStyles.boldLabel);
                         EditorGUILayout.HelpBox("Cleanup removes lighting components from this scene, including their Udon backings. Meshes, source packages, materials and baked texture files remain. Review the listed targets before confirming.", MessageType.Info);
                         if (GUILayout.Button("Remove Bakery components; keep Light Volumes…")) Cleanup(state, true);
                         if (GUILayout.Button("Remove Light Volumes; keep Bakery…")) Cleanup(state, false);
@@ -153,7 +154,7 @@ namespace Lightbulb.WorldTools
             foreach (string warning in preview.warnings) EditorGUILayout.HelpBox(warning, MessageType.Warning);
             acknowledge = EditorGUILayout.ToggleLeft("I reviewed approximations, unsupported shaders and the bake requirement", acknowledge);
             using (new EditorGUI.DisabledScope(!acknowledge))
-                if (GUILayout.Button(state == null ? "Create experiment and selected counterparts" : "Create selected missing counterparts")) Run(() => { if (state == null) LightingExperiment.Create(preview, addVolumes); else LightingExperiment.AddCounterparts(preview, state); preview = null; });
+                if (GUILayout.Button(state == null ? "Create swapper setup and selected counterparts" : "Create selected missing counterparts")) Run(() => { if (state == null) LightingExperiment.Create(preview, addVolumes); else LightingExperiment.AddCounterparts(preview, state); preview = null; });
         }
         void Cleanup(LightingExperimentState state, bool bakery)
         {

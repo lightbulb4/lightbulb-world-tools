@@ -36,6 +36,7 @@ namespace Lightbulb.WorldTools
             EditorGUILayout.HelpBox("Matching packing inputs share one new PNG per batch, saved beside the first matching material. AreaLit settings stay independent. " +
                 "Shared material assets also change wherever else they are used. " +
                 "Undo restores material settings; generated PNGs remain on disk. Review the scene before saving.", MessageType.Warning);
+            if (GUILayout.Button("Clean up tool files…")) ToolFileCleanupWindow.Open();
             using (new EditorGUI.DisabledScope(!MaterialTextureBatch.IsIdle))
             {
                 EditorGUI.BeginChangeCheck();

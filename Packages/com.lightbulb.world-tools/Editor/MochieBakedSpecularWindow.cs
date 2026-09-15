@@ -41,7 +41,7 @@ namespace Lightbulb.WorldTools
                         if (GUILayout.Button("Install patch")) Run(() =>
                         {
                             if (!EditorUtility.DisplayDialog("Patch installed Mochie?", "This edits " + patch.Path +
-                                ". A backup is kept in Library/LightbulbWorldTools/MochieSpecular. Shader references and materials are unchanged. " +
+                                ". A backup is kept in Library/LightbulbWorldTools. Shader references and materials are unchanged. " +
                                 "Existing enabled Bakery Specular Highlights will start working with Dominant Direction too.", "Install", "Cancel")) return;
                             message = MochieSpecularPatch.SetInstalled(patch.Path, true);
                             RefreshPatch(); Invalidate();

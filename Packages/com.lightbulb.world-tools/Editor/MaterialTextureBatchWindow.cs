@@ -110,7 +110,7 @@ namespace Lightbulb.WorldTools
             int count = entries.Count(e => e.Included && e.Changes.Count > 0);
             if (!EditorUtility.DisplayDialog("Update Material Textures",
                 $"Update and reimport {count} texture(s)? Shared textures change everywhere.\n\n" +
-                "Original .meta files will be backed up under Library/LightbulbWorldTools/Backups/MaterialTextures. " +
+                "The first original .meta file per texture is retained under Library/LightbulbWorldTools. " +
                 "This operation does not use Unity Undo.", "Apply", "Cancel")) return;
             try
             {

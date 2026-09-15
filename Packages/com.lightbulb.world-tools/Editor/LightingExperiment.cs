@@ -84,7 +84,7 @@ namespace Lightbulb.WorldTools
                 string materialFolder = CreateFolder("Assets/LightbulbLightingExperiments", preview.scene.name);
                 string backupScene = materialFolder + "/BeforeExperiment.unity";
                 if (!EditorSceneManager.SaveScene(preview.scene, backupScene, true)) throw new InvalidOperationException("Could not save the pre-experiment scene backup. Nothing was converted.");
-                var go = new GameObject("Lightbulb Lighting Experiment"); go.tag = "EditorOnly";
+                var go = new GameObject("Bakery LV3 Swapper"); go.tag = "EditorOnly";
                 Undo.RegisterCreatedObjectUndo(go, Operation);
                 var state = Undo.AddComponent<LightingExperimentState>(go);
                 state.materialFolder = materialFolder; state.backupScene = backupScene;

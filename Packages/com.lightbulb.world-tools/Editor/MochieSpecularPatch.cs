@@ -119,10 +119,8 @@ namespace Lightbulb.WorldTools
             string text = encoding.GetString(before, bom ? 3 : 0, before.Length - (bom ? 3 : 0));
             string after = Transform(text, install);
             if (after == text) return "No source change needed.";
-            string backup = "Library/LightbulbWorldTools/MochieSpecular/" + Guid.NewGuid().ToString("N") + "/StandardLighting.cginc";
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(backup));
-            File.WriteAllBytes(backup, before);
-            // Refuse to overwrite a concurrent import/edit.
+            string backup = ToolBackups.Preserve(path, before);
+
             if (!before.SequenceEqual(File.ReadAllBytes(path))) throw new InvalidOperationException("Mochie changed during the operation. Try again.");
             File.WriteAllText(path, after, encoding);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);

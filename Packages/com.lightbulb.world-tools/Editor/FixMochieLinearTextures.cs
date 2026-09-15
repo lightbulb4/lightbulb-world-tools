@@ -176,8 +176,8 @@ namespace Lightbulb.WorldTools
 
         internal static int Apply(List<Candidate> candidates)
         {
-            string backupRoot = Path.GetFullPath(Path.Combine("Library", "LightbulbWorldTools", "Backups",
-                "MochieLinearTextures", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")));
+            string backupRoot = Path.GetFullPath(ToolBackups.Root);
+            var originals = ToolBackups.Inventory();
             int fixedCount = 0;
             int failedCount = 0;
             try
@@ -187,9 +187,7 @@ namespace Lightbulb.WorldTools
                 {
                     if (!CanEdit(candidate.Path, out string reason))
                         throw new IOException(candidate.Path + ": " + reason);
-                    string backup = Path.Combine(backupRoot, candidate.Path + ".meta");
-                    Directory.CreateDirectory(Path.GetDirectoryName(backup));
-                    File.Copy(candidate.Path + ".meta", backup, false);
+                    ToolBackups.Preserve(candidate.Path + ".meta", inventory: originals);
                 }
                 if (candidates.Count == 0) return 0;
                 Debug.Log(LogPrefix + "Original texture metadata backups: " + backupRoot +

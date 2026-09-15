@@ -26,6 +26,8 @@ namespace Lightbulb.WorldTools
                 throw new InvalidOperationException("Only VideoPlayerShim 1.5.0 is supported. This version was not changed.");
 
             projectRoot = Path.GetFullPath(projectRoot);
+            if (!string.Equals(projectRoot.TrimEnd(Path.DirectorySeparatorChar), Directory.GetCurrentDirectory().TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Run the repair in its Unity project directory.");
             packageRoot = Path.GetFullPath(packageRoot);
             var expectedRoot = Path.Combine(projectRoot, "Packages", PackageName);
             var comparison = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -69,12 +71,9 @@ namespace Lightbulb.WorldTools
             if (hasBom)
                 bytes = new byte[] { 0xef, 0xbb, 0xbf }.Concat(bytes).ToArray();
 
-            var backupDirectory = Path.Combine(projectRoot, "Library", "LightbulbWorldTools", "Backups",
-                "VideoPlayerShim", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
-            var backup = Path.Combine(backupDirectory, "PlayModeUrlResolverShim.cs");
+            var relative = target.Substring(projectRoot.Length + 1).Replace('\\', '/');
+            var backup = ToolBackups.Preserve(relative, original);
             var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            EnsureNoLinks(backup);
-            Directory.CreateDirectory(backupDirectory);
             try
             {
                 using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -87,8 +86,8 @@ namespace Lightbulb.WorldTools
                 if (!File.ReadAllBytes(target).SequenceEqual(original))
                     throw new IOException("The resolver changed during the repair. Nothing was replaced.");
 
-                // Atomic replacement retains the previous file as a backup; never truncate the original.
-                File.Replace(temporary, target, backup);
+                // Atomic replacement; the first original was preserved above and is never overwritten.
+                File.Replace(temporary, target, null);
                 if (!File.ReadAllBytes(target).SequenceEqual(bytes))
                     throw new IOException("The resolver was replaced but verification failed. Restore the original from: " + backup);
                 return backup;
