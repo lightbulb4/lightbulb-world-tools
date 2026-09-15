@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.20 - 2026-09-14
+
+- Scene Texture Crunch results now sort largest first by imported resolution. Added select-only buttons for 4096, 2048, 1024 and 512 (longest side), respecting pending changes and the Crunch-off filter.
+
 ## 0.1.19 - 2026-09-14
 
 - Empty material-map results now sort largest first by imported resolution. Added select-only buttons for 4096, 2048, 1024 and 512 (longest side); choosing one clears selections at other sizes.

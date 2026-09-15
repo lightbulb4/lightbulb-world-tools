@@ -9,6 +9,8 @@ namespace Lightbulb.WorldTools
 {
     internal sealed class SceneTextureCrunchWindow : EditorWindow
     {
+        private static readonly int[] SelectionSizes = { 4096, 2048, 1024, 512 };
+        private static int ImportedSize(MaterialTextureBatch.Entry entry) => entry.Texture == null ? 0 : Math.Max(entry.Texture.width, entry.Texture.height);
         [SerializeField] private bool enable = true;
         [SerializeField] private int quality = 50;
         [SerializeField] private bool onlyWithoutCrunch;
@@ -41,6 +43,11 @@ namespace Lightbulb.WorldTools
             var found = Discover();
             entries = MaterialTextureBatch.CollectTextures(found.Objects.OfType<Texture>(),
                 enable ? MaterialTextureBatch.CrunchMode.Enable : MaterialTextureBatch.CrunchMode.Disable, quality, enable && onlyWithoutCrunch);
+            entries.Sort((a, b) =>
+            {
+                int size = ImportedSize(b).CompareTo(ImportedSize(a));
+                return size != 0 ? size : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
+            });
             hasPreview = true;
             message = found.Uncertainties.Count == 0 ? null : "Some dependencies could not be inspected:\n" + string.Join("\n", found.Uncertainties);
         }
@@ -93,6 +100,15 @@ namespace Lightbulb.WorldTools
                     if (GUILayout.Button("Select all")) foreach (var entry in entries) entry.Included = entry.Changes.Count > 0;
                     if (GUILayout.Button("Select none")) foreach (var entry in entries) entry.Included = false;
                 }
+                if (hasPreview)
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        GUILayout.Label("Select only (longest side):", GUILayout.Width(165));
+                        foreach (int size in SelectionSizes)
+                            if (GUILayout.Button(size.ToString()))
+                                foreach (var entry in entries)
+                                    entry.Included = entry.Changes.Count > 0 && ImportedSize(entry) == size;
+                    }
                 filter = EditorGUILayout.TextField("Filter textures", filter);
                 var changing = entries.Where(e => e.Changes.Count > 0).ToList();
                 var skipped = entries.Where(e => e.Changes.Count == 0 && e.Notes.Any(IsSkipNote)).ToList();
@@ -134,6 +150,7 @@ namespace Lightbulb.WorldTools
                         }
                 }
                 EditorGUILayout.EndScrollView();
+                if (hasPreview) EditorGUILayout.LabelField("Size buttons replace the selection, including results hidden by the text filter.", EditorStyles.wordWrappedMiniLabel);
                 using (new EditorGUI.DisabledScope(count == 0))
                     if (GUILayout.Button($"Apply to {count} textures")) Run(Apply);
                 EditorGUILayout.LabelField("Original images are untouched. The first original import settings per texture are retained under Library/LightbulbWorldTools. " +

@@ -33,6 +33,8 @@ Open the commands directly under **Tools > Lightbulb**.
 
 ### Scene Texture Crunch Compression
 
+Results sort largest first by imported longest-side resolution. **4096**, **2048**, **1024**, and **512** buttons select only textures of that exact size with pending changes, clearing all other selections (including text-filtered rows). No presets are offered below 512.
+
 Open **Tools > Lightbulb > Scene Texture Crunch Compression**, choose **Enable** or **Disable**, then **Scan active scene**. The main list shows only textures with pending changes. Textures already matching your settings are summarized by count; skipped textures and reasons are available in the collapsed **Skipped textures** section. Exclude individual textures and apply the selected changes.
 
 - Scans current in-memory scene references, including inactive objects, materials, sprites/UI, terrain layers and vegetation prototypes, referenced prefab assets, serialized script/ScriptableObject fields, animation texture/material swaps, skybox/reflection textures and lightmaps. Deduplicates texture assets. Uninspectable dependencies are reported. Runtime string-based loading, shader globals assigned by code, and arbitrary custom serialization are not guaranteed discoverable.
