@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Lightbulb.WorldTools.Tests
 {
-    public class ToolFileCleanupTests
+    public class ToolBackupsTests
     {
         string root, id;
         readonly List<string> backupFiles = new List<string>();
@@ -89,71 +89,6 @@ namespace Lightbulb.WorldTools.Tests
             string first = ToolBackups.Preserve(source, new byte[] { 1, 2 }); Track(first);
             Assert.That(ToolBackups.Preserve(source, new byte[] { 3, 4 }), Is.EqualTo(first));
             Assert.That(File.ReadAllBytes(first), Is.EqualTo(new byte[] { 1, 2 }));
-        }
-        Texture2D Texture()
-        {
-            var image = new Texture2D(4, 4); File.WriteAllBytes(root + "/test_Packed.png", image.EncodeToPNG()); Object.DestroyImmediate(image);
-            AssetDatabase.ImportAsset(root + "/test_Packed.png");
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(root + "/test_Packed.png");
-        }
-        [Test] public void PackedTrackingPreservesOtherLabels()
-        {
-            var texture = Texture(); AssetDatabase.SetLabels(texture, new[] { "UserLabel" });
-            ToolFileCleanup.TrackPacked(texture); ToolFileCleanup.TrackPacked(texture);
-            Assert.That(AssetDatabase.GetLabels(texture), Is.EquivalentTo(new[] { "UserLabel", ToolFileCleanup.PackedLabel }));
-        }
-        [Test] public void ClosedSceneAndStringGuidRegistriesProtectTextures()
-        {
-            var texture = Texture(); string path = AssetDatabase.GetAssetPath(texture);
-            var mat = new Material(Shader.Find("Standard")); mat.mainTexture = texture; AssetDatabase.CreateAsset(mat, root + "/mat.mat");
-            var previous = SceneManager.GetActiveScene();
-            if (string.IsNullOrEmpty(previous.path))
-            {
-                if (!Application.isBatchMode) Assert.Ignore("Save the open scene before scene integration tests.");
-                Assert.That(EditorSceneManager.SaveScene(previous, root + "/background.unity"), Is.True);
-            }
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            try
-            {
-                SceneManager.SetActiveScene(scene);
-                var go = new GameObject("Receiver"); go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-                EditorSceneManager.SaveScene(scene, root + "/closed.unity");
-            }
-            finally { SceneManager.SetActiveScene(previous); EditorSceneManager.CloseScene(scene, true); }
-            Assert.That(ToolFileCleanup.Referenced(new[] { path, root + "/mat.mat" }), Does.Contain(path));
-            AssetDatabase.DeleteAsset(root + "/closed.unity"); AssetDatabase.DeleteAsset(root + "/mat.mat");
-            File.WriteAllText(root + "/registry.json", "{\"guid\":\"" + AssetDatabase.AssetPathToGUID(path) + "\"}");
-            AssetDatabase.ImportAsset(root + "/registry.json");
-            Assert.That(ToolFileCleanup.Referenced(new[] { path }), Does.Contain(path));
-        }
-        [Test] public void RetainedMaterialKeepsItsTextureEvenIfBothWereCleanupCandidates()
-        {
-            var texture = Texture(); string path = AssetDatabase.GetAssetPath(texture);
-            var mat = new Material(Shader.Find("Standard")); mat.mainTexture = texture; AssetDatabase.CreateAsset(mat, root + "/mat.mat");
-            Assert.That(ToolFileCleanup.Referenced(new[] { path }), Does.Contain(path));
-            Assert.That(ToolFileCleanup.Referenced(new[] { path, root + "/mat.mat" }), Does.Not.Contain(path));
-        }
-        [Test] public void PreviewIsReadOnlyAndDeletionRevalidatesChanges()
-        {
-            if (!Application.isBatchMode) Assert.Ignore("Run destructive cleanup integration in the isolated batch test project.");
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            Assert.That(EditorSceneManager.SaveScene(scene, root + "/cleanup.unity"), Is.True);
-            var texture = Texture(); ToolFileCleanup.TrackPacked(texture);
-            string path = AssetDatabase.GetAssetPath(texture);
-            var preview = ToolFileCleanup.Scan(false, false);
-            Assert.That(File.Exists(path), Is.True);
-            Assert.That(preview.Entries.Any(e => e.Path == path), Is.True);
-            foreach (var entry in preview.Entries) entry.Included = entry.Path == path;
-            // A new reference after preview must block the entire selection.
-            var mat = new Material(Shader.Find("Standard")); mat.mainTexture = texture; AssetDatabase.CreateAsset(mat, root + "/new-reference.mat");
-            Assert.Throws<InvalidOperationException>(() => ToolFileCleanup.Apply(preview));
-            Assert.That(File.Exists(path), Is.True);
-            AssetDatabase.DeleteAsset(root + "/new-reference.mat");
-            preview = ToolFileCleanup.Scan(false, false);
-            foreach (var entry in preview.Entries) entry.Included = entry.Path == path;
-            Assert.That(ToolFileCleanup.Apply(preview), Is.EqualTo(1));
-            Assert.That(File.Exists(path), Is.False);
-            Assert.That(File.Exists(path + ".meta"), Is.False);
         }
         [Test] public void UVHelpersAreTemporaryAndReleased()
         {

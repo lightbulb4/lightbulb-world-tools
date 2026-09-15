@@ -292,7 +292,7 @@ namespace Lightbulb.WorldTools
             foreach (Entry entry in selected) ToolBackups.Preserve(entry.Path + ".meta", inventory: originals);
             Debug.Log("[Lightbulb] Original texture metadata backups: " + result.BackupRoot +
                 "\nTo restore, close Unity and copy these .meta files to their matching project paths. " +
-                "One original per asset is retained across tools and runs. Use Tools > Lightbulb > Clean Up Tool Files to locate it. This restores all import settings, not just size/Crunch. Deleting Library removes the backups.");
+                "One original per asset is retained across tools and runs. Each original backup folder contains source.txt with its restore destination. This restores all import settings, not just size/Crunch. Deleting Library removes the backups.");
 
             for (int i = 0; i < selected.Count; i++)
             {

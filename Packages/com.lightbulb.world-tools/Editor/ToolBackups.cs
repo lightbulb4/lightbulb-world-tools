@@ -43,7 +43,7 @@ namespace Lightbulb.WorldTools
             }
             return "path-" + Digest(Encoding.UTF8.GetBytes(source.ToLowerInvariant()));
         }
-        static Copy Read(string path, string source, string key = null)
+        internal static Copy Read(string path, string source, string key = null)
         {
             SafePath(Root, path);
             byte[] bytes = File.ReadAllBytes(path);
@@ -63,6 +63,7 @@ namespace Lightbulb.WorldTools
                     string path = folder + "/" + System.IO.Path.GetFileName(source);
                     copies.Add(Read(path, source, System.IO.Path.GetFileName(folder)));
                 }
+            // Temporary legacy inventory: removable after LegacyToolFileMigration has shipped.
             foreach (string category in new[] { "MaterialTextures", "MochieLinearTextures", "VideoPlayerShim" })
             {
                 string folder = Root + "/Backups/" + category;

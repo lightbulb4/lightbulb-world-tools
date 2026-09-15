@@ -34,7 +34,6 @@ namespace Lightbulb.WorldTools
                 scroll = view.scrollPosition;
                 EditorGUILayout.LabelField("Bakery LV3 Swapper", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox("Keep both setups in this scene. Conversion only creates missing counterparts. Mode switches preserve independent edits; rebake after changing lighting. Save the scene to preserve the experiment across restarts.", MessageType.Info);
-                if (GUILayout.Button("Clean up tool files…")) ToolFileCleanupWindow.Open();
                 if (!string.IsNullOrEmpty(error)) EditorGUILayout.HelpBox(error, MessageType.Error);
                 LightingExperimentState state = null;
                 try { state = LightingExperiment.FindState(UnityEngine.SceneManagement.SceneManager.GetActiveScene()); }

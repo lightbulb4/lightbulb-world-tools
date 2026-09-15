@@ -296,7 +296,6 @@ namespace Lightbulb.WorldTools
                 string packedProperty = detail ? "_DetailPackedMap" : "_PackedMap";
                 if (output == null || material.GetTexture(packedProperty) != output)
                     throw new InvalidOperationException("Mochie did not assign the packed texture.");
-                ToolFileCleanup.TrackPacked(output);
                 Configure(material, detail, output);
                 outputs.Add(request.Key, output);
                 result.Outputs.Add(AssetDatabase.GetAssetPath(output));
