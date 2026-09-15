@@ -5,6 +5,12 @@
 - Added **Mochie Baked Specular**: a reversible, source-checked Dominant Direction specular patch for Mochie Standard / Standard Lite, with opt-in reapplication after compatible updates and a build check for overwritten patches.
 - Added a scene-material preview to enable Bakery Specular Highlights with Undo. Requires existing compatible baked data; preserves material strengths, bake modes, roughness and metallic. Recommends moderate scalar roughness and leaves textured/very smooth/rough cases for review instead of treating zero roughness or zero metallic as non-reflective.
 
+## 0.1.16 - 2026-09-14
+
+- Added **Crunch currently off only** to Scene Texture Crunch Compression. When enabling Crunch, excludes textures already configured for Crunch in Default or any enabled platform override, regardless of quality, and preserves their existing import settings.
+- Preview explicitly labels proposed changes as not applied yet. Each platform has one state/quality line: enabling Crunch shows **OFF → ON** and the chosen quality, without presenting inactive stored quality as previously active compression. Quality changes to enabled Crunch show **stays ON** and the old/new qualities.
+- Passed 19 texture-batch EditMode tests, including mixed 50/100-quality preservation, enabled versus disabled platform overrides, and preview state wording.
+
 ## 0.1.15 - 2026-09-14
 
 - **Scene Texture Crunch Compression** now lists only textures with pending changes. Textures already matching the requested settings are summarized by count; skipped textures and their reasons are in a collapsed section. Shows a clear empty result when nothing needs changing.

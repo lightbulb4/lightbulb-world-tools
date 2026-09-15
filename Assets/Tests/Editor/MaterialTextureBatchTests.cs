@@ -167,6 +167,70 @@ namespace Lightbulb.WorldTools.Tests
         }
 
         [Test]
+        public void CrunchOffFilterPreservesMixedExistingQualitiesAndOnlyEnablesMissingCrunch()
+        {
+            Texture2D low = Texture("quality50", 32), high = Texture("quality100", 32), off = Texture("off", 32);
+            foreach (var pair in new[] { (low, 50), (high, 100) })
+            {
+                TextureImporter importer = Importer(pair.Item1);
+                importer.crunchedCompression = true;
+                importer.compressionQuality = pair.Item2;
+                importer.SaveAndReimport();
+            }
+            byte[] lowMetadata = File.ReadAllBytes(AssetDatabase.GetAssetPath(low) + ".meta");
+            byte[] highMetadata = File.ReadAllBytes(AssetDatabase.GetAssetPath(high) + ".meta");
+            var entries = MaterialTextureBatch.CollectTextures(new[] { low, high, off }, MaterialTextureBatch.CrunchMode.Enable, 73, true);
+            Assert.That(entries.Where(e => e.Included).Select(e => e.Texture), Is.EquivalentTo(new[] { off }));
+            Assert.That(entries.Count(e => e.ExcludedByCrunchFilter), Is.EqualTo(2));
+            var result = MaterialTextureBatch.Apply(entries);
+            Assert.That(result.Changed, Is.EqualTo(1));
+            Assert.That(result.Failed, Is.Zero);
+            Assert.That(Importer(off).crunchedCompression, Is.True);
+            Assert.That(Importer(off).compressionQuality, Is.EqualTo(73));
+            Assert.That(File.ReadAllBytes(AssetDatabase.GetAssetPath(low) + ".meta"), Is.EqualTo(lowMetadata));
+            Assert.That(File.ReadAllBytes(AssetDatabase.GetAssetPath(high) + ".meta"), Is.EqualTo(highMetadata));
+            Assert.That(MaterialTextureBatch.CollectTextures(new[] { low, high }, MaterialTextureBatch.CrunchMode.Enable, 73)
+                .Count(e => e.Included), Is.EqualTo(2), "Without the filter, quality updates are still offered.");
+        }
+
+        [TestCase(false, 50, "Crunch OFF → ON · Quality: 100")]
+        [TestCase(false, 100, "Crunch OFF → ON · Quality: 100")]
+        [TestCase(true, 50, "Crunch stays ON · Quality: 50 → 100")]
+        public void CrunchPreviewDistinguishesInactiveQualityFromActiveQuality(bool enabled, int storedQuality, string expected)
+        {
+            var settings = new TextureImporterPlatformSettings
+            {
+                format = TextureImporterFormat.Automatic,
+                textureCompression = TextureImporterCompression.Compressed,
+                crunchedCompression = enabled,
+                compressionQuality = storedQuality
+            };
+            var notes = new List<string>();
+            Assert.That(MaterialTextureBatch.PlanCrunch(settings, MaterialTextureBatch.CrunchMode.Enable, false, notes, "Default platform", 100), Is.True);
+            Assert.That(notes, Has.Count.EqualTo(1));
+            Assert.That(notes.Single(), Does.StartWith("Default platform: " + expected));
+            if (!enabled) Assert.That(notes.Single(), Does.Not.Contain("50"), "Inactive stored quality must not look like active compression.");
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void CrunchOffFilterChecksOnlyEnabledPlatformOverrides(bool enabledOverride)
+        {
+            Texture2D texture = Texture("override", 32);
+            TextureImporter importer = Importer(texture);
+            importer.crunchedCompression = false;
+            var settings = importer.GetPlatformTextureSettings("Standalone");
+            settings.overridden = enabledOverride;
+            settings.format = TextureImporterFormat.DXT5Crunched;
+            settings.crunchedCompression = true;
+            importer.SetPlatformTextureSettings(settings);
+            importer.SaveAndReimport();
+            var entry = MaterialTextureBatch.CollectTextures(new[] { texture }, MaterialTextureBatch.CrunchMode.Enable, 73, true).Single();
+            Assert.That(entry.ExcludedByCrunchFilter, Is.EqualTo(enabledOverride));
+            Assert.That(entry.Included, Is.EqualTo(!enabledOverride));
+        }
+
+        [Test]
         public void ExclusionsCancellationAndStalePreviewDoNotModifyTextures()
         {
             Texture2D first = Texture("one", 2048);
