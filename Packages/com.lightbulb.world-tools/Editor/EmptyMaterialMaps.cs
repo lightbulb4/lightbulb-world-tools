@@ -11,6 +11,7 @@ namespace Lightbulb.WorldTools
 {
     internal static class EmptyMaterialMaps
     {
+        internal const double FuzzyMinimumPercent = 99.99;
         internal sealed class Use
         {
             internal Material Material;

@@ -10,7 +10,6 @@ namespace Lightbulb.WorldTools
     internal sealed class EmptyMaterialMapsWindow : EditorWindow
     {
         [SerializeField] private bool fuzzy;
-        [SerializeField] private float minimum = 99;
         private EmptyMaterialMaps.Scan scan;
         private Vector2 scroll;
         private string search = "";
@@ -45,9 +44,7 @@ namespace Lightbulb.WorldTools
             using (new EditorGUI.DisabledScope(!MaterialTextureBatch.IsIdle))
             {
                 EditorGUI.BeginChangeCheck();
-                fuzzy = EditorGUILayout.Toggle("Fuzzy matching", fuzzy);
-                using (new EditorGUI.DisabledScope(!fuzzy))
-                    minimum = EditorGUILayout.Slider("Minimum identical pixels (%)", minimum, 90, 100);
+                fuzzy = EditorGUILayout.Toggle("Fuzzy matching (99.99%)", fuzzy);
                 if (EditorGUI.EndChangeCheck()) { scan = null; message = "Settings changed. Scan again."; }
                 EditorGUILayout.LabelField("Checks every pixel at the current imported resolution, including alpha. " +
                     "Exact pixel values; no thumbnail sampling or color tolerance. Normal values use GPU channel packing.", EditorStyles.wordWrappedMiniLabel);
@@ -126,7 +123,7 @@ namespace Lightbulb.WorldTools
             try
             {
                 scannedScene = SceneMaterials.Active();
-                scan = EmptyMaterialMaps.Collect(SceneMaterials.Collect(scannedScene, Cancel), fuzzy ? minimum : 100, Cancel);
+                scan = EmptyMaterialMaps.Collect(SceneMaterials.Collect(scannedScene, Cancel), fuzzy ? EmptyMaterialMaps.FuzzyMinimumPercent : 100, Cancel);
                 foreach (var entry in scan.Entries) entry.Included = CanRemove(entry);
                 message = scan.Entries.Count == 0 ? "No matching maps found. Expand scan notes for any skipped textures." : null;
             }

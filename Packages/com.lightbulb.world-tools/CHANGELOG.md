@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.18 - 2026-09-14
+
+- Fixed Windows long-path handling when reading or migrating legacy backups. Long backup paths no longer prevent Crunch and other texture operations from starting.
+- Fixed fuzzy matching for empty material maps at **99.99% identical pixels** and removed the adjustable percentage slider. Exact mode still requires every pixel to match.
+
 ## 0.1.17 - 2026-09-14
 
 - Renamed Lighting Experiment to **Bakery LV3 Swapper**, preserving existing scene component identities and generated folder paths.

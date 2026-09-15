@@ -41,7 +41,7 @@ namespace Lightbulb.WorldTools
                 var copies = group.OrderBy(c => c.Path.StartsWith(ToolBackups.Originals + "/", StringComparison.Ordinal) ? 0 : 1)
                     .ThenBy(c => c.Time).ThenBy(c => c.Path, StringComparer.Ordinal).ToList();
                 var original = copies[0];
-                byte[] bytes = File.ReadAllBytes(original.Path);
+                byte[] bytes = File.ReadAllBytes(ToolBackups.IOPath(original.Path));
                 if (ToolBackups.Digest(bytes) != original.Hash) throw new IOException("Backup changed during migration: " + original.Path);
                 // Move the retained original into the permanent store before deleting any old run copies.
                 string path = ToolBackups.Preserve(original.Source, bytes, new List<ToolBackups.Copy>());
