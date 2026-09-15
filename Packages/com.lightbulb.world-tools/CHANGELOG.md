@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.19 - 2026-09-14
+
+- Empty material-map results now sort largest first by imported resolution. Added select-only buttons for 4096, 2048, 1024 and 512 (longest side); choosing one clears selections at other sizes.
+
 ## 0.1.18 - 2026-09-14
 
 - Fixed Windows long-path handling when reading or migrating legacy backups. Long backup paths no longer prevent Crunch and other texture operations from starting.

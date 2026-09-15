@@ -12,6 +12,7 @@ namespace Lightbulb.WorldTools
     internal static class EmptyMaterialMaps
     {
         internal const double FuzzyMinimumPercent = 99.99;
+        internal static int ImportedSize(Entry entry) => entry.Texture == null ? 0 : Math.Max(entry.Texture.width, entry.Texture.height);
         internal sealed class Use
         {
             internal Material Material;
@@ -129,7 +130,11 @@ namespace Lightbulb.WorldTools
                     catch (Exception ex) { result.Notes.Add(entry.Path + ": " + ex.Message); }
                 }
             }
-            result.Entries.Sort((a, b) => string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase));
+            result.Entries.Sort((a, b) =>
+            {
+                int size = ImportedSize(b).CompareTo(ImportedSize(a));
+                return size != 0 ? size : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
+            });
             return result;
         }
 

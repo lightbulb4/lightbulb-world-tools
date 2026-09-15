@@ -10,6 +10,7 @@ namespace Lightbulb.WorldTools
     internal sealed class EmptyMaterialMapsWindow : EditorWindow
     {
         [SerializeField] private bool fuzzy;
+        private static readonly int[] SelectionSizes = { 4096, 2048, 1024, 512 };
         private EmptyMaterialMaps.Scan scan;
         private Vector2 scroll;
         private string search = "";
@@ -58,6 +59,14 @@ namespace Lightbulb.WorldTools
                     {
                         if (GUILayout.Button("Select all removable")) foreach (var entry in scan.Entries) entry.Included = CanRemove(entry);
                         if (GUILayout.Button("Select none")) foreach (var entry in scan.Entries) entry.Included = false;
+                    }
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        GUILayout.Label("Select only (longest side):", GUILayout.Width(165));
+                        foreach (int size in SelectionSizes)
+                            if (GUILayout.Button(size.ToString()))
+                                foreach (var entry in scan.Entries)
+                                    entry.Included = CanRemove(entry) && EmptyMaterialMaps.ImportedSize(entry) == size;
                     }
                     EmptyMaterialMaps.Entry removeOne = null;
                     using (var view = new EditorGUILayout.ScrollViewScope(scroll))
