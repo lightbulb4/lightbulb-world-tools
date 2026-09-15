@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.17 - 2026-09-14
 
 - Renamed Lighting Experiment to **Bakery LV3 Swapper**, preserving existing scene component identities and generated folder paths.
 - File repairs share one original backup per asset; repeated operations reuse the original. A one-time automatic migration consolidates verified legacy backups and removes surplus copies. No cleanup window or menu command.
