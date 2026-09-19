@@ -1,5 +1,18 @@
 # Lightbulb World Tools
 
+## Lightmaps and Light Volumes
+
+**Tools > Lightbulb > Lightmaps and Light Volumes** switches GI-contributing Mesh Renderers using exactly **Mochie/Standard**. Inactive objects are included; Standard Lite, other shaders and non-contributing objects are excluded.
+
+1. Open a saved scene and **Scan active scene**. Review the renderers and unique shared materials.
+2. Independently choose **Set Scale in Lightmap to 0**, **Enable Light Volumes**, and **Enable Light Volume specularity**, then **Apply selected changes**. Contribute GI, Receive GI, lighting strengths and additive settings are preserved.
+3. Save the scene and materials. **Rebake after changing scale**: the tool does not discard or manually reassign existing baked lightmaps.
+4. **Reverse: restore original settings** restores each original scale and only the material properties changed by the selected options. Already-enabled toggles remain enabled. Original zero scales remain zero. Rebake again after restoring scales.
+
+The restore record is stored in the scene on an **EditorOnly** object and survives scene save/reload; it is excluded from builds. Apply and Restore support Undo/Redo. Restore replaces later edits to those same properties; it does not restore old lightmap indices after a rebake. Do not delete the record before restoring.
+
+Shared material edits affect every user of those assets, including other scenes and prefab assets. The preview reports additional loaded renderer users; it does not scan unopened scenes. A mixed-material renderer's scale affects all its slots. Operations are blocked during Play Mode, builds, Unity/Bakery bakes, or an active Bakery LV3 Swapper experiment. This tool does not create volumes, alter lights or start baking.
+
 ## Mochie Baked Specular
 
 **Tools > Lightbulb > Mochie Baked Specular** adds approximate baked highlights for Dominant Direction to the verified Mochie Standard / Standard Lite v2.13 source. Keep the material's **Bakery Mode = None** for Dominant Direction. The tool does not change bake mode or rebake the scene.

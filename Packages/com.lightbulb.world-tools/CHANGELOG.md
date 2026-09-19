@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.21 - 2026-09-18
+
+- Added Lightmaps and Light Volumes: scene preview, independent scale/LV/specularity switches for GI-contributing Mochie/Standard renderers, persistent original-value restoration, Undo/Redo and bake guards.
+
 ## 0.1.20 - 2026-09-14
 
 - Scene Texture Crunch results now sort largest first by imported resolution. Added select-only buttons for 4096, 2048, 1024 and 512 (longest side), respecting pending changes and the Crunch-off filter.
