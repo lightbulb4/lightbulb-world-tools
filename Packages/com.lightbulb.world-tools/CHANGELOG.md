@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.22 - 2026-09-24
+
+- Consolidated the two vertex-count commands into **Rank by Vertex Count**, retaining the per-renderer ranking and removing the duplicate GameObject aggregation code.
+- Removed the old Bakery LV3 Swapper experiment/conversion tool and its associated code. Renamed the simpler Lightmaps and Light Volumes settings tool to **Bakery LV3 Swapper**, preserving its saved restore records.
+- Removed Mochie Baked Specular, including shader patching, automatic reapplication, and its build check. Shared Unity/Bakery bake guards remain in use by the swapper and legacy file cleanup.
+
 ## 0.1.21 - 2026-09-18
 
 - Added Lightmaps and Light Volumes: scene preview, independent scale/LV/specularity switches for GI-contributing Mochie/Standard renderers, persistent original-value restoration, Undo/Redo and bake guards.

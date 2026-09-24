@@ -10,6 +10,20 @@ namespace Lightbulb.WorldTools
 {
     internal static class SceneMaterials
     {
+        private static readonly System.Reflection.FieldInfo BakeryBake = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => a.GetType("ftRenderLightmap")).FirstOrDefault(t => t != null)?.GetField(
+                "bakeInProgress", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+        internal static bool IsLightingIdle => MaterialTextureBatch.IsIdle && !Lightmapping.isRunning &&
+            !(BakeryBake != null && BakeryBake.FieldType == typeof(bool) && (bool)BakeryBake.GetValue(null));
+
+        internal static void RequireLightingScene(Scene scene)
+        {
+            RequireActive(scene);
+            if (SceneManager.sceneCount != 1) throw new InvalidOperationException("Open only the scene you want to change.");
+            if (string.IsNullOrEmpty(scene.path)) throw new InvalidOperationException("Save this scene before changing lighting settings.");
+            if (!IsLightingIdle) throw new InvalidOperationException("Wait until Unity and Bakery have finished baking.");
+        }
+
         internal static Scene Active()
         {
             if (!MaterialTextureBatch.IsIdle || PrefabStageUtility.GetCurrentPrefabStage() != null)

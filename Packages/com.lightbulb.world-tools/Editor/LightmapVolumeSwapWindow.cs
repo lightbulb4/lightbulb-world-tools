@@ -11,8 +11,8 @@ namespace Lightbulb.WorldTools
         Vector2 scroll;
         LightmapVolumeSwap.Preview preview;
         string error, status;
-        [MenuItem("Tools/Lightbulb/Lightmaps and Light Volumes")]
-        internal static void Open() => GetWindow<LightmapVolumeSwapWindow>("Lightmaps / Volumes").Show();
+        [MenuItem("Tools/Lightbulb/Bakery LV3 Swapper")]
+        internal static void Open() => GetWindow<LightmapVolumeSwapWindow>("Bakery LV3 Swapper").Show();
         void OnEnable() { minSize = new Vector2(520, 440); Undo.undoRedoPerformed += Changed; EditorApplication.hierarchyChanged += Changed; }
         void OnDisable() { Undo.undoRedoPerformed -= Changed; EditorApplication.hierarchyChanged -= Changed; }
         void Changed() { preview = null; Repaint(); }
@@ -22,7 +22,7 @@ namespace Lightbulb.WorldTools
             using (var view = new EditorGUILayout.ScrollViewScope(scroll))
             {
                 scroll = view.scrollPosition;
-                EditorGUILayout.LabelField("Lightmaps and Light Volumes", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Bakery LV3 Swapper", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox("Scans the active scene, including inactive objects. Targets Mesh Renderers that contribute GI and use Mochie/Standard. Contribute GI stays enabled.", MessageType.Info);
                 EditorGUILayout.HelpBox("Rebake after changing Scale in Lightmap in either direction. This tool does not clear or reassign existing lightmaps. Save the scene and materials to preserve your settings and restore record.", MessageType.Info);
                 if (error != null) EditorGUILayout.HelpBox(error, MessageType.Error);

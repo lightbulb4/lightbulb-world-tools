@@ -1,8 +1,8 @@
 # Lightbulb World Tools
 
-## Lightmaps and Light Volumes
+## Bakery LV3 Swapper
 
-**Tools > Lightbulb > Lightmaps and Light Volumes** switches GI-contributing Mesh Renderers using exactly **Mochie/Standard**. Inactive objects are included; Standard Lite, other shaders and non-contributing objects are excluded.
+**Tools > Lightbulb > Bakery LV3 Swapper** switches GI-contributing Mesh Renderers using exactly **Mochie/Standard**. Inactive objects are included; Standard Lite, other shaders and non-contributing objects are excluded.
 
 1. Open a saved scene and **Scan active scene**. Review the renderers and unique shared materials.
 2. Independently choose **Set Scale in Lightmap to 0**, **Enable Light Volumes**, and **Enable Light Volume specularity**, then **Apply selected changes**. Contribute GI, Receive GI, lighting strengths and additive settings are preserved.
@@ -11,26 +11,15 @@
 
 The restore record is stored in the scene on an **EditorOnly** object and survives scene save/reload; it is excluded from builds. Apply and Restore support Undo/Redo. Restore replaces later edits to those same properties; it does not restore old lightmap indices after a rebake. Do not delete the record before restoring.
 
-Shared material edits affect every user of those assets, including other scenes and prefab assets. The preview reports additional loaded renderer users; it does not scan unopened scenes. A mixed-material renderer's scale affects all its slots. Operations are blocked during Play Mode, builds, Unity/Bakery bakes, or an active Bakery LV3 Swapper experiment. This tool does not create volumes, alter lights or start baking.
+Shared material edits affect every user of those assets, including other scenes and prefab assets. The preview reports additional loaded renderer users; it does not scan unopened scenes. A mixed-material renderer's scale affects all its slots. Operations are blocked during Play Mode, builds, and Unity/Bakery bakes. This tool does not create volumes, alter lights or start baking.
 
-## Mochie Baked Specular
+## Upgrading from the removed experimental tools
 
-**Tools > Lightbulb > Mochie Baked Specular** adds approximate baked highlights for Dominant Direction to the verified Mochie Standard / Standard Lite v2.13 source. Keep the material's **Bakery Mode = None** for Dominant Direction. The tool does not change bake mode or rebake the scene.
-
-1. **Check installed Mochie**, then **Install patch**. This modifies only a recognized `Assets/.../StandardLighting.cginc`, retaining a byte-for-byte backup under `Library/LightbulbWorldTools/`. It uses the existing lightmap samples and Bakery Specular Highlights toggle/strength; no new lightmap textures, draw passes or shader/material copies are needed. Existing enabled toggles gain the new behavior immediately.
-2. Optionally enable **Reapply after compatible updates**. This per-project setting is off by default. Source hashes (line-ending independent) guard the lighting and BRDF integration; changes to those files require review, even if a new release looks similar. Unchanged compatible files are automatically patched again after import. Unknown/native implementations are not guessed at or overwritten. An opted-in project's build is blocked if the patch is missing/incompatible; batch builds never rewrite the source.
-3. **Scan active scene**. Only renderer-assigned Standard / Standard Lite materials with compatible baked data are candidates, including inactive renderers. Existing SH/RNM/MonoSH materials can use their native baked-specular support. Package-owned, embedded, read-only, already-enabled and zero-strength materials are skipped. Terrain and runtime/script-only material swaps are outside this tool's scope.
-4. Review the material checkboxes and **Enable baked highlights**. Recommended selections have scalar roughness from 0.1 up to (but not including) 0.9. Textured/packed/detail/rain roughness, near-mirror or very rough surfaces, transparent materials and deliberately disabled regular highlights need manual review. These are recommendations, not a claim that roughness alone determines reflectivity. Zero roughness is a smooth reflective surface; nonmetals reflect light too. Texture pixels and animations are not analyzed. **All eligible** includes review cases.
-
-Only the Bakery Specular Highlights property and keyword are changed. Strength, regular specular, environment reflections, metallic, roughness and Bakery Mode are preserved. Shared material changes affect all their other uses; Undo restores the changes. The tool does not automatically save material assets. Changed material or renderer/lightmap assignments invalidate the preview.
-
-**Remove patch** disables auto-reapplication and removes only the exact Lightbulb block; unrelated source edits remain. Remove it **before uninstalling World Tools**. Shader-source changes are not Unity Undo operations. Backups in Library are local recovery copies and can be lost when Library is cleared; keep normal source control/backups too. Unknown or edited patch blocks require manual review, not restoring an old whole-file backup over a newer shader.
-
-The new highlights use a single dominant direction, not separate lights. They can look harsh on smooth surfaces; test representative materials in VR before enabling broadly. There is extra per-pixel shader math when enabled, but no runtime editor-tool cost. The patch is limited to static directional lightmaps, leaves the existing diffuse decode unchanged, and does not extend Mochie Mobile, Uber, or dynamic GI.
+The previous light-conversion experiment and Mochie Baked Specular tools are removed. Finish or restore an old experiment and remove any installed Lightbulb specular shader patch using version 0.1.21 before upgrading. Generated materials, lighting assets, and backups are retained; the new swapper does not restore old experiment records. Existing records from the former Lightmaps and Light Volumes tool continue to work.
 
 ## Original backups and legacy migration
 
-Each file repair retains one original backup per asset. Crunch, resizing and the Mochie linear-texture fix share the same texture metadata original. Repeated operations and shader patch install/remove cycles reuse it. UV Viewer uses temporary editor materials and no longer writes Resources assets.
+Each file repair retains one original backup per asset. Crunch, resizing and the Mochie linear-texture fix share the same texture metadata original. Repeated operations reuse it. UV Viewer uses temporary editor materials and no longer writes Resources assets.
 
 A temporary, automatic upgrade migration runs once per project/user when the editor is idle and open scenes are saved. It moves the earliest retained legacy originals into `Library/LightbulbWorldTools/Originals/<asset identity>/`, verifies their bytes, and removes surplus old run copies and empty directories. It also removes unchanged, recognized UV Viewer helpers when project and loaded-scene reference checks find no uses. Ambiguous, modified or referenced files are retained. Packed textures, source textures, swapper materials and pre-swap scene backups are functional/recovery assets and are not deleted by filename guesses.
 
@@ -126,32 +115,6 @@ Open **Tools > Lightbulb > Pack Mochie Materials in Scene**, then **Scan active 
 - The tool validates scene identity, material state, source/packed texture dependency hashes, output assignment/import, and packed keywords. A failed material is restored with its source references; any PNG created before failure remains on disk. Cancellation stops between materials and keeps completed results.
 - **Edit > Undo** restores material settings and cleared references for the batch. It does not delete generated PNGs. Materials are not automatically saved; review the scene and then save the project. Packing and import compression can affect appearance, especially non-grayscale source maps or detail maps using alpha in blending. This is not a guarantee of pixel-identical rendering or reduced build size.
 
-### Bakery LV3 Swapper
-
-Open **Tools > Lightbulb > Bakery LV3 Swapper** in one saved scene, outside Play Mode. This is an editor authoring workflow: **rebake after changing the setup**. It does not provide an in-game lighting switch or guarantee identical lighting between engines.
-
-Requires installed **VRC Light Volumes 3.0.0-dev.18** and Bakery. The adapter checks the installed types and method contracts; neither dependency is modified or distributed. Older/newer LV versions are refused because registration and baking behavior varies.
-
-1. Preview from Bakery or from Point Light Volumes. Choose natural point/spot/rectangular-area conversion, or force point-light approximations. Review unsupported sources and shaders, select conversions, and create the experiment. Before conversion, the tool saves a copy of the current scene (including unsaved scene edits) as `BeforeExperiment.unity` in its output folder. This preserves scene configuration; it does not duplicate texture/material dependencies or protect baked files from later overwrites.
-2. Both sets remain in the scene with persistent counterpart links. **Bakery**, **Point LVs only**, and **Hybrid** presets change participation; they never repeat conversion. Edit each active setup independently. Explicit **Copy settings to counterpart** overwrites supported point/spot properties only after confirmation.
-3. Choose individual lights and custom combinations, then **Apply**. Excluded lights have their intensity and relevant shadow/probe bake flags gated, with authoring values retained in the experiment state. The window exposes saved intensity and enabled state while a light is gated. Color, projection assets, transforms and other parameters remain on the actual components.
-4. Regular volumes are excluded by deactivating their dedicated GameObjects, preserving their configured Bake flag and Bakery helper. Their objects must not contain renderers, terrain, Unity lights or a manager. Native regular-volume baking checks hierarchy activity; the point shadow baker does not reliably check component enabled state, so the tool separately gates its shadow flags. Native sync copies the result to Udon and refreshes the manager.
-5. Save the scene. The experiment's data-only component lives on an **EditorOnly** object and is stripped from world/player builds. Both configured lighting systems remain in the scene until explicit cleanup. Keep that tag and do not manually delete the state or tracked lights mid-experiment.
-
-**Lighting and material scope:** mesh-renderer lightmap scales, receive-GI/probe settings and existing lightmap indices/ST are saved and restored. Terrain lightmap scale and assignments are also recorded. Turning lightmaps off sets scale to zero and clears assignments; mesh renderers stop sampling old Unity light probes. Unity lights are disabled in the LV-only setup. Reflection probes are disabled there by default, with an explicit option to retain them. Baking can overwrite old lighting assets, so use a separate Bakery output folder for each setup. A restored assignment is not a restored bake.
-
-Shader routing is verified for **Mochie Standard / Standard Lite v2.13** renderer materials. The tool creates material assets under `Assets/LightbulbLightingExperiments/<scene>/` and assigns those copies only to this scene's renderers; other scenes retain their originals. Shader-specific routing fields are owned by the experiment controls; other material edits persist. Unsupported shaders and terrain material routing are not automatically converted. The preview lists unsupported shaders; accepting them means those surfaces may retain other lighting or not show LVs. Materials reached only through scripts/animation swaps are outside scope.
-
-Hybrid can keep Bakery lightmaps while enabling LV diffuse and/or LV specular highlights. **LV specular-only needs lightmaps** with this Mochie shader. Reflected scenery, lightmap specular highlights and light-source specular highlights are distinct contributions. Full baked lightmaps do not expose a general “Bakery shadows only” switch; no such unsupported control is offered. The tool does not suppress unrelated lighting packages such as AreaLit/LTCGI, emissive materials, or custom lighting scripts.
-
-**Conversion:** point/spot color, pose and supported textures/cones are transferred. Brightness/falloff/source-size relationships are estimates with an initial brightness multiplier, not photometric equivalence. Only readable four-vertex XY rectangular emitters are mapped to area LVs; arbitrary mesh emission, IES, sky and sun need explicit force-point approximations or remain unconverted. Force-point sky uses world center, sun uses world center displaced opposite its direction by the world's bounds radius, and mesh emitters use their bounds center. Converted lights use world scale one except rectangular area dimensions. PLV parametric range is derived by its manager; a copied range value does not override that model. Unsupported LUT/material projections are refused rather than guessed.
-
-**Fitted volumes:** deterministic geometry-bound splitting uses fixed candidate splits, at most 10 boxes, padding, and a configurable voxel density. It only splits when doing so reduces estimated occupied box volume by more than 10%; one cube-shaped world normally remains one volume. Geometry layers and a Scene View bounds preview help exclude distant decoration. This is a spatial heuristic, not room/walkability detection. The displayed raw SH estimate excludes atlas padding/other texture overhead. Regular volumes require a bake to contain light. The installed manager uploads at most 128 point/spot/area lights; previews warn above that count, and overlapping lights can still be expensive below it.
-
-**Finishing:** cleanup previews the components to remove, then uses Undo-aware component removal, including Udon backings. Removing Bakery includes scene Bakery runtime components/storage and switches remaining LV baking to Progressive. Removing LVs retains unrelated geometry and Bakery emitters. Texture assets, source packages and experiment material copies remain on disk. Finalization keeps material edits and restores original shader-routing values when returning to Bakery. The retained setup needs another bake. Undo finalization before clearing Unity's undo history if you need the removed setup back.
-
-**Known native bake issue:** the installed LV dev.18 point shadow baker reports `RenderTexture.Create failed: colorFormat & depthStencilFormat cannot both be none` when rendering a Mochie Standard test surface in Unity 2022.3.22f1 / D3D11. This was reproduced through the native LV bake without an experiment. The inclusion test passes with a basic Unlit surface: the enabled point gets a shadow asset and the excluded point gets none. The tool does not repair this upstream rendering issue; check the Console and verify shadow appearance in your world after baking.
-
 ### Fix Mochie Linear Textures in Scene
 
 Run **Tools > Lightbulb > Fix Mochie Linear Textures in Scene** outside Play Mode. It applies the same texture import change as Mochie's **"This texture is marked as sRGB, but should be linear" > Fix Now**, across the active scene.
@@ -172,13 +135,9 @@ Ranks baked renderers by their estimated allocation in the current lightmaps. Th
 
 ## Geometry
 
-### Rank Renderers by Vertex Count
+### Rank by Vertex Count
 
 Lists `MeshRenderer` and `SkinnedMeshRenderer` objects from highest to lowest mesh vertex count.
-
-### Rank GameObjects by Vertex Count
-
-Groups vertex counts by the GameObject directly containing each renderer and lists the totals from highest to lowest.
 
 ### UV Viewer
 

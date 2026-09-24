@@ -40,11 +40,7 @@ namespace Lightbulb.WorldTools
         }
         internal static void RequireReady(Scene scene)
         {
-            // Existing guard checks edit mode, active saved scene, Unity and Bakery bakes.
-            LightingExperiment.RequireScene(scene);
-            var experiment = LightingExperiment.FindState(scene);
-            if (experiment != null && !experiment.finished)
-                throw new InvalidOperationException("This scene has an active Bakery LV3 Swapper experiment. Finish or undo that experiment before using this tool; both tools control the same surface settings.");
+            SceneMaterials.RequireLightingScene(scene);
         }
         internal static Preview Scan(Scene scene)
         {

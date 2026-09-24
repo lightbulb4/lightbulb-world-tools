@@ -22,7 +22,7 @@ namespace Lightbulb.WorldTools
         }
         static void WhenIdle()
         {
-            if (EditorApplication.timeSinceStartup < EarliestRun || !MochieSpecularPatch.IsIdle || PrefabStageUtility.GetCurrentPrefabStage() != null) return;
+            if (EditorApplication.timeSinceStartup < EarliestRun || !SceneMaterials.IsLightingIdle || PrefabStageUtility.GetCurrentPrefabStage() != null) return;
             for (int i = 0; i < SceneManager.sceneCount; i++) if (SceneManager.GetSceneAt(i).isDirty) return;
             EditorApplication.update -= WhenIdle;
             try
