@@ -1,6 +1,6 @@
 # Lightbulb World Tools
 
-Lightbulb World Tools provides Unity editor diagnostics, scene texture Crunch compression, disabled-object reference auditing, material texture tools, and reversible lightmap / Light Volume material settings for VRChat worlds. Swapper restore records are saved on EditorOnly objects and stripped from world builds.
+Lightbulb World Tools provides AreaLit occlusion baking and configuration audits, Unity editor diagnostics, scene texture Crunch compression, disabled-object reference auditing, material texture tools, and reversible lightmap / Light Volume material settings for VRChat worlds. Swapper restore records are saved on EditorOnly objects and stripped from world builds.
 
 ## Install
 

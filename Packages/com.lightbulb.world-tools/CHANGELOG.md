@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.23 - 2026-09-24
+
+- Include AreaLit Occlusion Baker and Configuration Audit from standalone version 0.2.2, preserving their menus, asset GUIDs, assembly identity, outputs, and recovery records.
+- Declare the standalone AreaLit package as replaced through VPM's legacyPackages migration, preventing duplicate installations without adding a dependency.
+- Keep automatic post-bake updates limited to unambiguous receiver settings; shared-material conflict repair remains manual.
+
 ## 0.1.22 - 2026-09-24
 
 - Consolidated the two vertex-count commands into **Rank by Vertex Count**, retaining the per-renderer ranking and removing the duplicate GameObject aggregation code.

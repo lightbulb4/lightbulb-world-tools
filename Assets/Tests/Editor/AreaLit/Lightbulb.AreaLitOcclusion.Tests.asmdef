@@ -1,0 +1,6 @@
+{
+  "name": "Lightbulb.AreaLitOcclusion.Tests",
+  "references": ["Lightbulb.AreaLitOcclusion.Editor"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

@@ -1,5 +1,17 @@
 # Lightbulb World Tools
 
+
+## AreaLit Occlusion Baker and Configuration Audit
+
+**Tools > Lightbulb > AreaLit Occlusion Baker** and **Tools > Lightbulb > AreaLit Configuration Audit** are included in World Tools. See the [AreaLit workflow](Documentation~/AreaLit.md) for baking, output adjustment, receiver mapping, and manual audit actions.
+
+After a bake, selected receivers get the new bake's UV1 tiling and offset wherever the mapping is unambiguous. Texture assignment is enabled by default and can be disabled independently. Shared-material conflicts are reported and conflicting settings are preserved; the baker never creates material variants or changes receiver material assignments. Conflict repair remains an explicit manual audit action.
+
+### Upgrading from standalone AreaLit Occlusion Baker
+
+Finish or recover any active occlusion bake before upgrading. World Tools uses VPM's [legacyPackages migration](https://vcc.docs.vrchat.com/vpm/packages/#vpm-manifest-additions) to replace the standalone package, so VCC removes its duplicate scripts and manifest entry during installation. For a manual ZIP or UnityPackage installation, remove the standalone package first; do not install both copies.
+
+The AreaLit assembly name, script/shader GUIDs, menu paths, output folders, and recovery journals are unchanged. Existing baked textures, materials, scene data and manual repair records remain in their original locations. World Tools does not depend on the standalone package or force installation of the VRChat SDK, AreaLit, Mochie, or Bakery. AreaLit materials are required for the AreaLit tools, and Bakery-dependent commands require Bakery; other tools remain usable without them.
 ## Bakery LV3 Swapper
 
 **Tools > Lightbulb > Bakery LV3 Swapper** switches GI-contributing Mesh Renderers using exactly **Mochie/Standard**. Inactive objects are included; Standard Lite, other shaders and non-contributing objects are excluded.

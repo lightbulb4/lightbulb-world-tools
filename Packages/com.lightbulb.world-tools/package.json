@@ -1,14 +1,17 @@
 {
   "name": "com.lightbulb.world-tools",
   "displayName": "Lightbulb World Tools",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "unity": "2022.3",
-  "description": "Unity editor tools for the reversible Bakery LV3 Swapper, scene texture Crunch compression, disabled-object reference auditing, material cleanup and Mochie packing, texture resizing, geometry diagnostics, and targeted repairs.",
+  "description": "Unity editor tools for AreaLit occlusion baking and configuration audits, the reversible Bakery LV3 Swapper, scene texture Crunch compression, disabled-object reference auditing, material cleanup and Mochie packing, texture resizing, geometry diagnostics, and targeted repairs.",
   "author": {
     "name": "Lightbulb",
     "email": "nobodysystems@gmail.com",
     "url": "https://github.com/lightbulb4"
   },
+  "legacyPackages": [
+    "com.lightbulb.arealit-occlusion"
+  ],
   "license": "MIT",
   "documentationUrl": "https://github.com/lightbulb4/lightbulb-world-tools#readme",
   "changelogUrl": "https://github.com/lightbulb4/lightbulb-world-tools/blob/main/Packages/com.lightbulb.world-tools/CHANGELOG.md",
