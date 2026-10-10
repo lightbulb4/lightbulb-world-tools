@@ -12,6 +12,18 @@ After a bake, selected receivers get the new bake's UV1 tiling and offset wherev
 Finish or recover any active occlusion bake before upgrading. World Tools uses VPM's [legacyPackages migration](https://vcc.docs.vrchat.com/vpm/packages/#vpm-manifest-additions) to replace the standalone package, so VCC removes its duplicate scripts and manifest entry during installation. For a manual ZIP or UnityPackage installation, remove the standalone package first; do not install both copies.
 
 The AreaLit assembly name, script/shader GUIDs, menu paths, output folders, and recovery journals are unchanged. Existing baked textures, materials, scene data and manual repair records remain in their original locations. World Tools does not depend on the standalone package or force installation of the VRChat SDK, AreaLit, Mochie, or Bakery. AreaLit materials are required for the AreaLit tools, and Bakery-dependent commands require Bakery; other tools remain usable without them.
+## Mochie Light Volumes in Scene
+
+Open **Tools > Lightbulb > Mochie Light Volumes in Scene** and **Scan active scene** to see the matching materials. Supports exactly **Mochie/Standard** and **Mochie/Standard Lite**, using their seven Light Volumes properties verified against v2.13. Mochie is optional and its source is neither modified nor bundled.
+
+- Includes inactive objects and skinned renderers. Each shared material is edited once. Materials merely stored in the project are excluded.
+- Each field shows current counts for the scanned materials: On / Off for toggles, and 0 / 1 / >1 for numbers. Other values (such as fractions or negatives) and missing properties are counted separately when present. Counts refresh after edits and Undo; scan again after changing scene assignments.
+- Choose **Keep / On / Off** for Light Volumes, additive volumes, and specular highlights. Choose **Keep / Set / Add** for Light Volume strength, additive strength, specular strength, and bias. **Set** assigns an absolute value; **Add** offsets each material's current value.
+- **Apply settings to active scene** applies the chosen operations. **−1 / +1 to every material** immediately offsets only specular strength, independently of the pending settings, and does not enable specular highlights. For example, strengths 0.5 and 3 become 1.5 and 4 with +1.
+- Main strength is limited to 0–1, matching Mochie's Range property. Other numeric fields accept finite values, including negatives, matching Mochie's unrestricted Float fields. Bias is numeric, not a toggle.
+- Each action rescans the active scene and validates every target before making changes. Read-only, embedded, package, or transient materials block the batch; extract/copy them to editable `.mat` assets under Assets first. Unsupported shader properties also block the batch with an error.
+- Changes are saved directly to material assets, affecting every scene or prefab that shares them. Normal Unity Undo is supported. There are no persistent backups, restore objects, shader patches, or runtime components. This tool does not alter Light Volume managers, Point Light Volumes, shadow maps, lightmap allocations, or Bakery data.
+
 ## Bakery LV3 Swapper
 
 **Tools > Lightbulb > Bakery LV3 Swapper** switches GI-contributing Mesh Renderers using exactly **Mochie/Standard**. Inactive objects are included; Standard Lite, other shaders and non-contributing objects are excluded.

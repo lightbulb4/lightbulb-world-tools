@@ -10,7 +10,7 @@ Add the Lightbulb VPM listing to VRChat Creator Companion:
 
 Then add **Lightbulb World Tools** to a Unity 2022.3 project.
 
-All commands are directly under **Tools > Lightbulb**. See the [package documentation](Packages/com.lightbulb.world-tools/README.md) for details.
+All commands are directly under **Tools > Lightbulb**. **Mochie Light Volumes in Scene** edits the active scene's Standard and Standard Lite material settings, with absolute values, relative offsets, and one-click specular-strength steps. See the [package documentation](Packages/com.lightbulb.world-tools/README.md) for details.
 
 ## License
 

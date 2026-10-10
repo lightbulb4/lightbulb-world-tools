@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.24 - 2026-10-10
+
+- Add Mochie Light Volumes in Scene for Standard and Standard Lite materials, including inactive objects and skinned renderers.
+- Edit Light Volumes, additive and specular toggles; set or offset strengths and bias; apply immediate −1 / +1 specular-strength adjustments per material.
+- Show per-field material counts: On / Off for toggles and 0 / 1 / >1 for numbers, accounting for other values and missing properties.
+- Deduplicate shared materials, leave unspecified settings unchanged, validate the full batch before editing, and support normal Unity Undo without persistent backup records.
+
 ## 0.1.23 - 2026-09-24
 
 - Include AreaLit Occlusion Baker and Configuration Audit from standalone version 0.2.2, preserving their menus, asset GUIDs, assembly identity, outputs, and recovery records.
