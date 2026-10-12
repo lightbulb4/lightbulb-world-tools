@@ -18,9 +18,11 @@ namespace Lightbulb.WorldTools
         private List<MaterialTextureBatch.Entry> entries = new List<MaterialTextureBatch.Entry>();
         private string message;
         private Vector2 scroll;
+        private Vector2 messageScroll;
         private string filter = "";
         private bool hasPreview;
         private bool showSkipped;
+        private bool showMessages;
 
         private static bool IsSkipNote(string note) => note.IndexOf("skipped", StringComparison.OrdinalIgnoreCase) >= 0;
 
@@ -156,7 +158,16 @@ namespace Lightbulb.WorldTools
                 EditorGUILayout.LabelField("Original images are untouched. The first original import settings per texture are retained under Library/LightbulbWorldTools. " +
                     "Restore by closing Unity and copying the backup .meta files to matching project paths. This is not Unity Undo.", EditorStyles.wordWrappedMiniLabel);
             }
-            if (!string.IsNullOrEmpty(message)) EditorGUILayout.HelpBox(message, MessageType.Info);
+            if (!string.IsNullOrEmpty(message))
+            {
+                showMessages = EditorGUILayout.Foldout(showMessages, "Messages", true);
+                if (showMessages)
+                    using (var view = new EditorGUILayout.ScrollViewScope(messageScroll, GUILayout.Height(Mathf.Min(120f, position.height * 0.2f))))
+                    {
+                        messageScroll = view.scrollPosition;
+                        EditorGUILayout.HelpBox(message, MessageType.Info);
+                    }
+            }
         }
     }
 }

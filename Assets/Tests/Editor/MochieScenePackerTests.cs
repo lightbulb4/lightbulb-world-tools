@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -6,11 +7,12 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Lightbulb.WorldTools.Tests
 {
-    // Run against an installed, unmodified Mochie v2.13 in the development project.
+    // Run against the installed Mochie Standard integration in the development project.
     // Mochie is an optional integration and is never distributed in the World Tools package.
     public class MochieScenePackerTests
     {
@@ -18,10 +20,10 @@ namespace Lightbulb.WorldTools.Tests
         private Scene scene;
         private string root;
 
-        [SetUp]
-        public void SetUp()
+        [UnitySetUp]
+        public IEnumerator SetUp()
         {
-            if (Shader.Find("Mochie/Standard") == null) Assert.Ignore("Install Mochie v2.13 to run native packer integration tests.");
+            if (Shader.Find("Mochie/Standard") == null) Assert.Ignore("Install Mochie Standard to run native packer integration tests.");
             string name = "__LightbulbPackingTests_" + Guid.NewGuid().ToString("N");
             AssetDatabase.CreateFolder("Assets", name);
             root = "Assets/" + name;
@@ -34,6 +36,9 @@ namespace Lightbulb.WorldTools.Tests
             scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             Assert.That(EditorSceneManager.SaveScene(scene, root + "/active.unity"), Is.True);
             SceneManager.SetActiveScene(scene);
+            yield return null;
+            for (int i = 0; i < 600 && !MaterialTextureBatch.IsIdle; i++) yield return null;
+            Assert.That(MaterialTextureBatch.IsIdle, Is.True, "Wait for fixture imports to finish before testing the scene packer.");
         }
 
         [TearDown]

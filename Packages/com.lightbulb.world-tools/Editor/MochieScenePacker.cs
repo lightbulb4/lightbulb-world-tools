@@ -209,9 +209,6 @@ namespace Lightbulb.WorldTools
                 Type packer = FindType("Mochie.TexturePacker");
                 Type editorType = FindType("Mochie.StandardEditor");
                 editor = Activator.CreateInstance(editorType);
-                var version = editorType.GetField("versionLabel", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (version == null || !Equals(version.GetValue(editor), "v2.13"))
-                    throw new InvalidOperationException("This tool supports Mochie Standard Editor v2.13. The installed version has not been verified.");
                 var signature = new List<Type> { typeof(Material) };
                 for (int i = 0; i < 4; i++) { signature.Add(typeof(MaterialProperty)); signature.Add(typeof(float)); }
                 signature.Add(typeof(MaterialProperty));
@@ -230,7 +227,7 @@ namespace Lightbulb.WorldTools
             private static Type FindType(string name)
             {
                 var types = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name, false)).Where(t => t != null).ToArray();
-                if (types.Length != 1) throw new InvalidOperationException("Install one copy of Mochie Standard v2.13 first (missing or duplicate " + name + ").");
+                if (types.Length != 1) throw new InvalidOperationException("Install one copy of Mochie Standard with its editor tools first (missing or duplicate " + name + ").");
                 return types[0];
             }
 

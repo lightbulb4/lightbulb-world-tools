@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.25 - 2026-10-11
+
+- Remove the Mochie scene packer's exact version lock. Compatible shader updates can use the installed native packer; packing API, material-property, shader-support, and output validation remain in place.
+- Keep Scene Texture Crunch messages in a collapsible, height-limited scroll panel so long scan logs do not squeeze the texture selection list.
+
 ## 0.1.24 - 2026-10-10
 
 - Add Mochie Light Volumes in Scene for Standard and Standard Lite materials, including inactive objects and skinned renderers.

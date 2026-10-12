@@ -29,7 +29,7 @@ namespace Lightbulb.WorldTools
         private void OnGUI()
         {
             EditorGUILayout.LabelField("Pack Mochie Materials in Scene", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Uses Mochie Standard v2.13's installed texture packer. Scans materials assigned to the active scene, " +
+            EditorGUILayout.HelpBox("Uses Mochie Standard's installed texture packer. Scans materials assigned to the active scene, " +
                 "including inactive objects. Supports Standard and Standard Lite primary maps, and Standard detail maps.", MessageType.Info);
             EditorGUILayout.HelpBox("Successful packing clears the separate data-map references. Already-packed materials with leftover references " +
                 "are included for cleanup without repacking. Texture files are kept; Undo restores the references.", MessageType.Info);
