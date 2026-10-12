@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.26 - 2026-10-11
+
+- Fix disabled-object and scene-texture reference scans failing on Udon AnimationCurve variables. Curves and arrays of curves no longer block the scan or hide later object references; unknown reference containers still block cleanup.
+
 ## 0.1.25 - 2026-10-11
 
 - Remove the Mochie scene packer's exact version lock. Compatible shader updates can use the installed native packer; packing API, material-property, shader-support, and output validation remain in place.

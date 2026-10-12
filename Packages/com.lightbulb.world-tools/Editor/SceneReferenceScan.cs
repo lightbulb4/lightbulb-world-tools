@@ -231,6 +231,8 @@ namespace Lightbulb.WorldTools
             if (value is Object obj) { reference(obj, path); return; }
             Type type = value.GetType();
             if (value is string || type.IsPrimitive || type.IsEnum || value is decimal) return;
+            // Curves contain numeric keyframes and wrap modes, never Unity object references.
+            if (value is AnimationCurve) return;
             if (!visited.Add(value)) return;
             // SDK VRCUrl is a string wrapper, not an opaque reference container.
             // Inspect its actual fields so a future SDK adding an object reference still gets scanned.
