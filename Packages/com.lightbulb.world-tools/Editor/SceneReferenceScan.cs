@@ -26,6 +26,7 @@ namespace Lightbulb.WorldTools
             internal readonly HashSet<Object> Objects = new HashSet<Object>();
             internal readonly List<Reference> References = new List<Reference>();
             internal readonly HashSet<string> Uncertainties = new HashSet<string>();
+            internal readonly HashSet<string> Warnings = new HashSet<string>();
         }
 
         internal static GameObject Owner(Object value) => value is GameObject go ? go : (value as Component)?.gameObject;
@@ -56,7 +57,7 @@ namespace Lightbulb.WorldTools
                         enqueue(transform.gameObject);
                         foreach (Component component in transform.GetComponents<Component>())
                         {
-                            if (component == null) result.Uncertainties.Add("Missing script on " + Describe(transform.gameObject));
+                            if (component == null) result.Warnings.Add("Missing script on " + Describe(transform.gameObject));
                             else enqueue(component);
                         }
                     }
@@ -89,7 +90,7 @@ namespace Lightbulb.WorldTools
                     {
                         foreach (Component component in gameObject.GetComponents<Component>())
                         {
-                            if (component == null) result.Uncertainties.Add("Missing script on " + Describe(gameObject));
+                            if (component == null) result.Warnings.Add("Missing script on " + Describe(gameObject));
                             else enqueue(component);
                         }
                         foreach (Transform child in gameObject.transform) enqueue(child.gameObject);
@@ -103,6 +104,11 @@ namespace Lightbulb.WorldTools
                             enterChildren = CanContainReferences(property.propertyType);
                             if (enterChildren && property.isArray && property.arraySize > 0)
                                 enterChildren = CanContainReferences(property.GetArrayElementAtIndex(0).propertyType);
+                            // Prefab source/override metadata is not a runtime dependency. The live
+                            // instance is already scanned; explicitly referenced prefabs still are too.
+                            if (property.propertyPath == "m_CorrespondingSourceObject" ||
+                                property.propertyPath == "m_PrefabInstance" || property.propertyPath == "m_PrefabAsset")
+                            { enterChildren = false; continue; }
                             // Ownership and hierarchy are not usage references.
                             if ((source is Component && property.propertyPath == "m_GameObject") ||
                                 (source is Transform && (property.propertyPath == "m_Father" || property.propertyPath.StartsWith("m_Children"))) ||

@@ -118,7 +118,8 @@ namespace Lightbulb.WorldTools
                         if (dependency != null) referenced.Add(AssetDatabase.GetAssetPath(dependency));
             var scenes = Enumerable.Range(0, SceneManager.sceneCount).Select(SceneManager.GetSceneAt).Where(s => s.isLoaded).ToList();
             var live = SceneReferenceScan.Collect(scenes);
-            if (live.Uncertainties.Count != 0) referenced.UnionWith(deletion); // Uncertain scenes retain every helper.
+            if (live.Uncertainties.Count != 0 || live.Warnings.Count != 0)
+                referenced.UnionWith(deletion); // File deletion stays conservative when scripts or references cannot be inspected.
             foreach (var obj in live.Objects) if (obj != null) referenced.Add(AssetDatabase.GetAssetPath(obj));
             return referenced;
         }

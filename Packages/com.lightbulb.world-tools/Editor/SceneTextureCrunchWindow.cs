@@ -51,7 +51,10 @@ namespace Lightbulb.WorldTools
                 return size != 0 ? size : string.Compare(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
             });
             hasPreview = true;
-            message = found.Uncertainties.Count == 0 ? null : "Some dependencies could not be inspected:\n" + string.Join("\n", found.Uncertainties);
+            var messages = new List<string>();
+            if (found.Warnings.Count > 0) messages.Add("Missing scripts were skipped:\n" + string.Join("\n", found.Warnings));
+            if (found.Uncertainties.Count > 0) messages.Add("Some dependencies could not be inspected:\n" + string.Join("\n", found.Uncertainties));
+            message = messages.Count == 0 ? null : string.Join("\n\n", messages);
         }
 
         private void Run(Action action)

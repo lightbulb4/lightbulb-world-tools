@@ -24,6 +24,7 @@ namespace Lightbulb.WorldTools
             internal Scene Scene;
             internal readonly List<Entry> Entries = new List<Entry>();
             internal readonly List<string> Uncertainties = new List<string>();
+            internal readonly List<string> Warnings = new List<string>();
             internal IEnumerable<Entry> Candidates => Entries.Where(e => e.Object != null && e.Candidate);
         }
 
@@ -42,6 +43,7 @@ namespace Lightbulb.WorldTools
                 .Where(s => s.isLoaded && !EditorSceneManager.IsPreviewScene(s)).ToArray();
             SceneReferenceScan.Result references = SceneReferenceScan.Collect(scenes, cancel);
             scan.Uncertainties.AddRange(references.Uncertainties.OrderBy(s => s, StringComparer.Ordinal));
+            scan.Warnings.AddRange(references.Warnings.OrderBy(s => s, StringComparer.Ordinal));
             var entriesByObject = new Dictionary<GameObject, Entry>();
             foreach (GameObject root in scan.Scene.GetRootGameObjects())
                 foreach (Transform transform in root.GetComponentsInChildren<Transform>(true))

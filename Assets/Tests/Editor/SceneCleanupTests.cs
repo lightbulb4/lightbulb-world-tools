@@ -164,17 +164,31 @@ namespace Lightbulb.WorldTools.Tests
         }
 
         [Test]
-        public void MissingScriptBlocksBatchAndExplainsWhy()
+        public void MissingScriptsWarnWithoutBlockingKnownReferencesOrUndo()
         {
             var missing = Go("Missing");
             var script = missing.AddComponent<SceneScanFixture>();
             using (var serialized = new SerializedObject(script))
             { serialized.FindProperty("m_Script").objectReferenceValue = null; serialized.ApplyModifiedPropertiesWithoutUndo(); }
+            var referenced = Go("Referenced", false);
+            missing.AddComponent<SceneScanFixture>().References = new Object[] { referenced };
             var target = Go("Target", false);
+            target.tag = "Respawn";
             var scan = DisabledObjectCleanup.Collect();
-            Assert.That(scan.Uncertainties.Any(s => s.Contains("Missing script")), Is.True);
-            Assert.That(Entry(scan, target).Candidate, Is.False);
-            Assert.That(scan.Candidates, Is.Empty, "An incomplete scan must not show unverified objects as cleanup results.");
+            Assert.That(scan.Uncertainties, Is.Empty);
+            Assert.That(scan.Warnings.Single(), Does.Contain("Missing script"));
+            Assert.That(Entry(scan, referenced).Candidate, Is.False);
+            Assert.That(scan.Candidates.Select(e => e.Object), Is.EquivalentTo(new[] { target }));
+            var changes = DisabledObjectCleanup.Apply(scan);
+            Assert.That(changes.Count, Is.EqualTo(1));
+            Assert.That(target.tag, Is.EqualTo("EditorOnly"));
+            Assert.That(referenced.tag, Is.EqualTo("Untagged"));
+            Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(missing), Is.EqualTo(1));
+            Undo.FlushUndoRecordObjects();
+            Undo.PerformUndo();
+            Assert.That(target.tag, Is.EqualTo("Respawn"));
+            Assert.That(target.activeSelf, Is.False);
+            Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(missing), Is.EqualTo(1));
         }
 
         [Test]
@@ -301,6 +315,25 @@ namespace Lightbulb.WorldTools.Tests
             var found = SceneReferenceScan.Collect(new[] { scene });
             Assert.That(found.Uncertainties, Is.Empty);
             Assert.That(found.Objects.Contains(texture), Is.True);
+        }
+
+        [Test]
+        public void PrefabSourceMetadataDoesNotRestoreOverriddenTextureReferences()
+        {
+            Texture2D sourceTexture = Texture("source"), instanceTexture = Texture("instance");
+            var sourceMaterial = Mat(sourceTexture);
+            AssetDatabase.CreateAsset(sourceMaterial, folder + "/source.mat");
+            var root = Go("PrefabRoot");
+            root.AddComponent<MeshRenderer>().sharedMaterial = sourceMaterial;
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, folder + "/source.prefab");
+            Object.DestroyImmediate(root);
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            instance.GetComponent<MeshRenderer>().sharedMaterial = Mat(instanceTexture);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(instance.GetComponent<MeshRenderer>());
+            var found = SceneReferenceScan.Collect(new[] { scene });
+            Assert.That(found.Uncertainties, Is.Empty);
+            Assert.That(found.Objects.Contains(instanceTexture), Is.True);
+            Assert.That(found.Objects.Contains(sourceTexture), Is.False);
         }
 
         [Test]

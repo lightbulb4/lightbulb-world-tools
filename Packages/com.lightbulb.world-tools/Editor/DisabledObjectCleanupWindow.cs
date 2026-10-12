@@ -11,6 +11,8 @@ namespace Lightbulb.WorldTools
         private DisabledObjectCleanup.Scan scan;
         [SerializeField] private List<DisabledObjectCleanup.TagChange> changes = new List<DisabledObjectCleanup.TagChange>();
         private Vector2 scroll;
+        private Vector2 messageScroll;
+        private bool showScanMessages;
         private string message;
         private string filter = "";
 
@@ -49,8 +51,7 @@ namespace Lightbulb.WorldTools
                 {
                     var candidates = scan.Candidates.ToList();
                     if (scan.Uncertainties.Count > 0)
-                        EditorGUILayout.HelpBox("Could not finish checking references. Fix these scan issues and scan again:\n\n" +
-                            string.Join("\n", scan.Uncertainties), MessageType.Warning);
+                        EditorGUILayout.LabelField("Reference scan incomplete. See scan messages below.", EditorStyles.wordWrappedLabel);
                     else
                         EditorGUILayout.LabelField($"{candidates.Count} unreferenced disabled objects | {candidates.Count(e => e.Included)} selected");
                     scroll = EditorGUILayout.BeginScrollView(scroll);
@@ -75,6 +76,21 @@ namespace Lightbulb.WorldTools
                             scan = null;
                             message = $"Marked {applied.Count} branch roots EditorOnly. Scene remains unsaved; Edit > Undo is available.";
                         });
+                    if (scan != null && (scan.Warnings.Count > 0 || scan.Uncertainties.Count > 0))
+                    {
+                        showScanMessages = EditorGUILayout.Foldout(showScanMessages,
+                            $"Scan messages ({scan.Warnings.Count} warnings, {scan.Uncertainties.Count} blocking issues)", true);
+                        if (showScanMessages)
+                            using (var view = new EditorGUILayout.ScrollViewScope(messageScroll, GUILayout.Height(Mathf.Min(140f, position.height * 0.25f))))
+                            {
+                                messageScroll = view.scrollPosition;
+                                if (scan.Warnings.Count > 0)
+                                    EditorGUILayout.HelpBox("Missing scripts were skipped. Known references were still checked; these warnings do not block marking objects.\n\n" +
+                                        string.Join("\n", scan.Warnings), MessageType.Warning);
+                                if (scan.Uncertainties.Count > 0)
+                                    EditorGUILayout.HelpBox("Could not finish checking these references:\n\n" + string.Join("\n", scan.Uncertainties), MessageType.Warning);
+                            }
+                    }
                 }
                 using (new EditorGUI.DisabledScope(changes.Count == 0))
                     if (GUILayout.Button("Restore original tags from this window")) Run(() =>

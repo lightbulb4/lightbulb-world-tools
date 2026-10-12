@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.27 - 2026-10-11
+
+- Keep disabled-object scanning and marking available when scripts are missing. Report skipped scripts as warnings while continuing to protect objects with known references.
+- Ignore prefab source and override metadata during runtime-reference discovery; explicitly referenced prefabs are still scanned.
+- Put disabled-object scan messages in a collapsible, height-limited panel so the object list and marking controls remain visible.
+
 ## 0.1.26 - 2026-10-11
 
 - Fix disabled-object and scene-texture reference scans failing on Udon AnimationCurve variables. Curves and arrays of curves no longer block the scan or hide later object references; unknown reference containers still block cleanup.
