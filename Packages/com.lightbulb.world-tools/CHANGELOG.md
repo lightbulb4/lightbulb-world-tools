@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.28 - 2026-10-13
+
+- Add Duplicate Lightmap Usage: active-scene categories grouped by shared mesh and complete ordered material slots, with current bake counts, configured receivers, inactive/disabled counts, and estimated atlas footprint.
+- Count overlapping atlas rectangles once per category and flag overlaps with other categories; invalid or missing bake bindings do not produce invented allocations.
+- Select category objects, set a custom Scale in Lightmap or zero for lightmap receivers, or explicitly switch matching renderers to light probes. Edits preserve materials and static flags, support Undo and prefab overrides, and validate stale categories before changing settings.
+
 ## 0.1.27 - 2026-10-11
 
 - Keep disabled-object scanning and marking available when scripts are missing. Report skipped scripts as warnings while continuing to protect objects with known references.

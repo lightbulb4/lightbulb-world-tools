@@ -155,6 +155,17 @@ Run **Tools > Lightbulb > Fix Mochie Linear Textures in Scene** outside Play Mod
 
 A second run makes no changes when the scene's supported textures are already linear.
 
+### Duplicate Lightmap Usage
+
+Open **Tools > Lightbulb > Duplicate Lightmap Usage**, then **Scan active scene**. Lists repeated Mesh Renderers sharing the exact mesh asset and every material slot in the same order, independent of shader. Instances with different transforms or lightmap scales still belong to the same category. Includes inactive objects by default; disabled renderer counts are shown separately. Skinned meshes are outside this tool's scope.
+
+- Sort categories by estimated atlas footprint, currently lightmapped count, or total instance count. Current bake bindings and configured receivers are separate: a renderer can still have an old bake allocation after its settings change. A valid texture/index is required for current bake counts; no bake is required to list configured duplicates.
+- Footprint is an estimate from atlas dimensions and renderer UV scale/offset rectangles, not measured occupied UV islands or guaranteed memory savings. Overlapping rectangles are counted once per category, and overlaps with other categories (including singletons) are flagged. Category totals may overlap and should not be summed as recoverable space. Unknown rectangles are reported. A rebake using fewer or smaller atlases is what reduces lightmap texture memory.
+- **Select objects** selects all listed category members. Expand a category to inspect its mesh, ordered materials, and individual renderers.
+- **Apply scale** and **Set to 0** edit matching GI contributors whose Receive GI is Lightmaps, including currently zero-scale receivers. Probe receivers are left alone. Zero excludes a renderer's surface from the next lightmap bake while keeping Contribute GI enabled.
+- **Use light probes** separately sets Receive GI to Light Probes and probe usage to Blend Probes for every listed category member. Scale, static flags, materials, and shader Light Volume settings are preserved. Appropriate baked probes and shader support are required; Unity light probes and shader Light Volumes are separate systems.
+- Changes affect the active scene's listed renderers and record prefab instance overrides, not prefab source assets. Scan and review before applying; stale category membership or settings are rejected. Edits require a saved single scene outside Play/Prefab Mode, builds, and Unity/Bakery baking. Normal Unity Undo restores individual prior settings; save the scene and rebake to persist and use the changes. The tool does not clear existing lightmaps or start a bake.
+
 ### Rank by Lightmap Texel Usage
 
 Ranks baked renderers by their estimated allocation in the current lightmaps. This is total lightmap pixel usage, not texel density per world-space unit. Bake the scene before running the command.

@@ -59,7 +59,7 @@ namespace Lightbulb.WorldTools
                         using (new EditorGUILayout.HorizontalScope())
                         {
                             EditorGUILayout.ObjectField(r, typeof(MeshRenderer), true);
-                            GUILayout.Label("Scale " + LightmapVolumeSwap.Scale(r).ToString("0.###"), GUILayout.Width(85));
+                            GUILayout.Label("Scale " + RendererLightingSettings.Scale(r).ToString("0.###"), GUILayout.Width(85));
                         }
                     EditorGUILayout.LabelField("Shared materials", EditorStyles.boldLabel);
                     foreach (var m in preview.materials) EditorGUILayout.ObjectField(m, typeof(Material), false);

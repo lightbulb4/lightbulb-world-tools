@@ -25,19 +25,6 @@ namespace Lightbulb.WorldTools
         internal static bool Matches(Material m) => m != null && m.shader != null && m.shader.name == "Mochie/Standard";
         internal static LightmapVolumeSwapState State(Scene scene) => scene.GetRootGameObjects()
             .SelectMany(g => g.GetComponentsInChildren<LightmapVolumeSwapState>(true)).SingleOrDefault();
-        internal static float Scale(MeshRenderer renderer)
-        {
-            using (var so = new SerializedObject(renderer)) return so.FindProperty("m_ScaleInLightmap").floatValue;
-        }
-        static void SetScale(MeshRenderer renderer, float scale)
-        {
-            using (var so = new SerializedObject(renderer))
-            {
-                so.FindProperty("m_ScaleInLightmap").floatValue = scale;
-                so.ApplyModifiedPropertiesWithoutUndo();
-            }
-            PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
-        }
         internal static void RequireReady(Scene scene)
         {
             SceneMaterials.RequireLightingScene(scene);
@@ -54,7 +41,7 @@ namespace Lightbulb.WorldTools
                 otherMaterialUsers = Resources.FindObjectsOfTypeAll<Renderer>().Count(r => !EditorUtility.IsPersistent(r)
                     && r.gameObject.scene.IsValid() && !renderers.Contains(r) && r.sharedMaterials.Any(materials.Contains)) };
             // Include all slots and settings so the displayed plan cannot silently become stale.
-            preview.fingerprint = string.Join(";", renderers.Select(r => r.GetInstanceID() + ":" + Scale(r).ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+            preview.fingerprint = string.Join(";", renderers.Select(r => r.GetInstanceID() + ":" + RendererLightingSettings.Scale(r).ToString("R", System.Globalization.CultureInfo.InvariantCulture)
                 + ":" + (int)r.receiveGI + ":" + string.Join(",", r.sharedMaterials.Select(m => m == null ? 0 : m.GetInstanceID()))))
                 + "|" + string.Join(";", materials.Select(m => m.GetInstanceID() + ":" + m.shader.GetInstanceID() + ":"
                     + (m.HasProperty(Volumes) ? m.GetFloat(Volumes).ToString("R", System.Globalization.CultureInfo.InvariantCulture) : "missing") + ":"
@@ -90,13 +77,13 @@ namespace Lightbulb.WorldTools
                 }
                 Undo.RegisterCompleteObjectUndo(state, Operation);
                 state.changeScale = scale; state.changeVolumes = volumes; state.changeSpecularity = specularity;
-                state.surfaces = scale ? preview.renderers.Select(r => new LightmapVolumeSwapState.Surface { renderer = r, scale = Scale(r) }).ToList()
+                state.surfaces = scale ? preview.renderers.Select(r => new LightmapVolumeSwapState.Surface { renderer = r, scale = RendererLightingSettings.Scale(r) }).ToList()
                     : new List<LightmapVolumeSwapState.Surface>();
                 state.materials = volumes || specularity ? preview.materials.Select(m => new LightmapVolumeSwapState.MaterialSettings
                     { material = m, volumes = volumes ? m.GetFloat(Volumes) : 0, specularity = specularity ? m.GetFloat(Specularity) : 0 }).ToList()
                     : new List<LightmapVolumeSwapState.MaterialSettings>();
                 Undo.RecordObjects(state.surfaces.Select(s => (Object)s.renderer).Concat(state.materials.Select(m => (Object)m.material)).ToArray(), Operation);
-                foreach (var s in state.surfaces) SetScale(s.renderer, 0);
+                foreach (var s in state.surfaces) RendererLightingSettings.SetScale(s.renderer, 0);
                 foreach (var m in state.materials)
                 {
                     if (volumes) m.material.SetFloat(Volumes, 1);
@@ -123,7 +110,7 @@ namespace Lightbulb.WorldTools
             {
                 Undo.RegisterCompleteObjectUndo(state, Operation);
                 Undo.RecordObjects(state.surfaces.Select(s => (Object)s.renderer).Concat(state.materials.Select(m => (Object)m.material)).ToArray(), Operation);
-                foreach (var s in state.surfaces) SetScale(s.renderer, s.scale);
+                foreach (var s in state.surfaces) RendererLightingSettings.SetScale(s.renderer, s.scale);
                 foreach (var m in state.materials)
                 {
                     if (state.changeVolumes) m.material.SetFloat(Volumes, m.volumes);

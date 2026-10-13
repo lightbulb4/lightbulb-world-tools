@@ -75,26 +75,26 @@ namespace Lightbulb.WorldTools.Tests
         [Test] public void ReverseRestoresIndividualOriginalsAndSupportsUndoRedo()
         {
             var state = LightmapVolumeSwap.Apply(LightmapVolumeSwap.Scan(SceneManager.GetActiveScene()), true, true, true);
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.Zero);
-            Assert.That(LightmapVolumeSwap.Scale(second), Is.Zero);
+            Assert.That(RendererLightingSettings.Scale(first), Is.Zero);
+            Assert.That(RendererLightingSettings.Scale(second), Is.Zero);
             Assert.That(material.GetFloat(LightmapVolumeSwap.Volumes), Is.EqualTo(1));
             Assert.That(GameObjectUtility.GetStaticEditorFlags(first.gameObject) & StaticEditorFlags.ContributeGI, Is.Not.Zero);
             LightmapVolumeSwap.Restore(state);
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.EqualTo(.37f));
-            Assert.That(LightmapVolumeSwap.Scale(second), Is.EqualTo(2.5f));
+            Assert.That(RendererLightingSettings.Scale(first), Is.EqualTo(.37f));
+            Assert.That(RendererLightingSettings.Scale(second), Is.EqualTo(2.5f));
             Assert.That(material.GetFloat(LightmapVolumeSwap.Volumes), Is.Zero);
             Assert.That(material.GetFloat(LightmapVolumeSwap.Specularity), Is.EqualTo(1));
             Undo.PerformUndo();
             Assert.That(state.applied, Is.True);
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.Zero);
+            Assert.That(RendererLightingSettings.Scale(first), Is.Zero);
             Undo.PerformRedo();
             Assert.That(state.applied, Is.False);
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.EqualTo(.37f));
+            Assert.That(RendererLightingSettings.Scale(first), Is.EqualTo(.37f));
         }
         [Test] public void OptionsOnlyChangeAndRestoreSelectedProperties()
         {
             var state = LightmapVolumeSwap.Apply(LightmapVolumeSwap.Scan(SceneManager.GetActiveScene()), false, false, true);
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.EqualTo(.37f));
+            Assert.That(RendererLightingSettings.Scale(first), Is.EqualTo(.37f));
             Assert.That(material.GetFloat(LightmapVolumeSwap.Volumes), Is.Zero);
             material.SetFloat(LightmapVolumeSwap.Volumes, 1);
             LightmapVolumeSwap.Restore(state);
@@ -109,7 +109,7 @@ namespace Lightbulb.WorldTools.Tests
             var state = LightmapVolumeSwap.Apply(LightmapVolumeSwap.Scan(SceneManager.GetActiveScene()), true, true, true);
             UnityEngine.Object.DestroyImmediate(second.gameObject);
             Assert.Throws<InvalidOperationException>(() => LightmapVolumeSwap.Restore(state));
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.Zero);
+            Assert.That(RendererLightingSettings.Scale(first), Is.Zero);
             Assert.That(state.applied, Is.True);
         }
         [UnityTest] public IEnumerator SavedSceneRetainsRestoreRecordAcrossReload()
@@ -125,7 +125,7 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(state.CompareTag("EditorOnly"), Is.True);
             LightmapVolumeSwap.Restore(state);
             Assert.That(state.surfaces[0].renderer, Is.Not.Null);
-            foreach (var s in state.surfaces) Assert.That(LightmapVolumeSwap.Scale(s.renderer), Is.EqualTo(s.scale));
+            foreach (var s in state.surfaces) Assert.That(RendererLightingSettings.Scale(s.renderer), Is.EqualTo(s.scale));
             Assert.That(state.materials[0].material.GetFloat(LightmapVolumeSwap.Volumes), Is.Zero);
         }
         [Test] public void ApplyUndoRemovesRecordAndRestoresSettings()
@@ -133,7 +133,7 @@ namespace Lightbulb.WorldTools.Tests
             LightmapVolumeSwap.Apply(LightmapVolumeSwap.Scan(SceneManager.GetActiveScene()), true, true, true);
             Undo.PerformUndo();
             Assert.That(LightmapVolumeSwap.State(SceneManager.GetActiveScene()), Is.Null);
-            Assert.That(LightmapVolumeSwap.Scale(first), Is.EqualTo(.37f));
+            Assert.That(RendererLightingSettings.Scale(first), Is.EqualTo(.37f));
             Assert.That(material.GetFloat(LightmapVolumeSwap.Volumes), Is.Zero);
         }
     }
