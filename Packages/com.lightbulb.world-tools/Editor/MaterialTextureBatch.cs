@@ -246,7 +246,7 @@ namespace Lightbulb.WorldTools
             }
         }
 
-        private static bool CanEdit(string path, out string reason)
+        internal static bool CanEdit(string path, out string reason)
         {
             reason = null;
             if (string.IsNullOrEmpty(path)) { reason = "No asset path."; return false; }
@@ -268,7 +268,7 @@ namespace Lightbulb.WorldTools
             return AssetDatabase.IsOpenForEdit(meta, out reason, StatusQueryOptions.ForceUpdate);
         }
 
-        private static TextureImporter Revalidate(Entry entry)
+        internal static TextureImporter Revalidate(Entry entry)
         {
             if (!CanEdit(entry.Path, out string reason)) throw new IOException(entry.Path + ": " + reason);
             var importer = AssetImporter.GetAtPath(entry.Path) as TextureImporter;

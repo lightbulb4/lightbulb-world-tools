@@ -57,6 +57,19 @@ Open the commands directly under **Tools > Lightbulb**.
 
 ## Rendering
 
+### Scene Normal Map Format
+
+Open **Tools > Lightbulb > Scene Normal Map Format**, choose one of two presets, **Scan active scene**, review the unique textures and their material slots, then apply:
+
+- **Quality — BC5 (no Crunch):** better normal fidelity, particularly on smooth/glossy surfaces; downloads can be larger.
+- **Download size — DXT5 + Crunch (100)** (default): usually smaller downloads, with more potential banding/blockiness. Reuses the existing Crunch planner and always sets quality to 100, including existing lower-quality Crunch textures. There is no quality slider or preserve-quality toggle.
+- **GPU memory is identical between presets:** 8 bits per pixel, about 5.3 MiB for a 2K texture with mipmaps; both use 75% less GPU texture data than RGBA32 at the same resolution. Both are lossy, and final download size depends on content and bundle compression. Unsupported stored formats (such as DXT1 on a normal map) are reported using Unity's fallback instead of claiming false memory savings.
+
+- Finds textures imported as **Normal Map** in current shader texture properties on scene-referenced materials. Includes inactive objects and discoverable material swaps through the shared scene-reference scanner. Does not guess from filenames or change import types. Terrain-layer normal fields, texture-only animation swaps, runtime string loads and shader globals are outside this material-property scan.
+- Changes only the **Windows / Mac / Linux (Standalone)** override. Creates an override from effective defaults when needed and preserves resolution caps and mipmaps. Default and mobile settings are untouched. Shared textures change everywhere they are used. BC5 requires a shader that reconstructs the normal's Z component. Either preset can be applied after earlier conversions; the original restore point is retained.
+- **Restore original desktop settings** restores all textures changed by this tool in the project to their settings before the first conversion, including absent or disabled overrides. Repeated conversions retain that original. Restore follows asset GUIDs after renames and preserves other importer settings. Textures with later desktop-setting edits are skipped and their records retained; reconcile those edits before retrying. Restore is separate from **Edit > Undo**.
+- Recovery is saved before each import in `Library/LightbulbWorldTools/NormalMapFormats.json` and survives editor restarts. Clearing Library deletes it. Original `.meta` backups also use the existing shared backup store. Cancellation stops between textures and retains recovery for completed changes. Stale previews are rejected before applying; original image files are untouched.
+
 ### Scene Texture Crunch Compression
 
 Results sort largest first by imported longest-side resolution. **4096**, **2048**, **1024**, and **512** buttons select only textures of that exact size with pending changes, clearing all other selections (including text-filtered rows). No presets are offered below 512.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.29 - 2026-11-10
+
+- Add Scene Normal Map Format with two presets: BC5 without Crunch for quality, or DXT5 + Crunch at 100 for download size. Keep the UI concise with one tip recommending Crunch 100 first and BC5 for individual maps with visible artifacts.
+- Reuse shared Crunch planning, preserve resolution and other platforms, and retain persistent restoration of original desktop settings with protection for later desktop edits.
+
 ## 0.1.28 - 2026-10-13
 
 - Add Duplicate Lightmap Usage: active-scene categories grouped by shared mesh and complete ordered material slots, with current bake counts, configured receivers, inactive/disabled counts, and estimated atlas footprint.
