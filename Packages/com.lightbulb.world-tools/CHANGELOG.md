@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.30 - 2026-11-20
+
+- Right-click a Hierarchy object and choose **Lightbulb > Configure Mochie AreaLit** to enable or disable AreaLit on compatible shared materials used by the object and its descendants, including inactive children.
+- Assign or clear the Mesh and Texture 0, 1, 2, and 3+ slots independently. The tool reports materials it cannot edit and supports undoing the batch in one step.
+
 ## 0.1.29 - 2026-11-10
 
 - Add Scene Normal Map Format with two presets: BC5 without Crunch for quality, or DXT5 + Crunch at 100 for download size. Keep the UI concise with one tip recommending Crunch 100 first and BC5 for individual maps with visible artifacts.

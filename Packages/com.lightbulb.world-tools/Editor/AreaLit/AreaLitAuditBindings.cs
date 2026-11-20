@@ -40,13 +40,29 @@ namespace Lightbulb.AreaLitOcclusion
 
     internal static class AreaLitAuditBindings
     {
+        internal static readonly (string property, string label)[] ReceiverSlots =
+        {
+            ("_LightMesh", "Mesh"), ("_LightTex0", "Texture 0"), ("_LightTex1", "Texture 1"),
+            ("_LightTex2", "Texture 2"), ("_LightTex3", "Texture 3+")
+        };
+
+        internal static TextureDimension Dimension(string property) =>
+            property == "_LightTex3" ? TextureDimension.Tex2DArray : TextureDimension.Tex2D;
+
+        internal static string TextureProblem(Texture texture, TextureDimension dimension)
+        {
+            if (texture == null) return "Choose the texture to apply.";
+            if (!EditorUtility.IsPersistent(texture)) return "Choose a saved texture asset, not a temporary texture.";
+            return texture.dimension != dimension ? "This slot requires " + dimension + "." : null;
+        }
+
         public static AreaLitAuditBindingGroup Collect(string property, string label, bool required,
             IEnumerable<Material> materials, int excludedRecursiveMaterials = 0)
         {
             var group = new AreaLitAuditBindingGroup
             {
                 property = property, label = label, required = required,
-                dimension = property == "_LightTex3" ? TextureDimension.Tex2DArray : TextureDimension.Tex2D,
+                dimension = Dimension(property),
                 excludedRecursiveMaterials = excludedRecursiveMaterials
             };
             foreach (var material in materials.Where(material => material.HasProperty(property)).Distinct()
@@ -78,9 +94,8 @@ namespace Lightbulb.AreaLitOcclusion
             if (group == null || group.members.Count == 0) return "No supported materials are in this scope.";
             if (!clear)
             {
-                if (texture == null) return "Choose the texture to apply.";
-                if (!EditorUtility.IsPersistent(texture)) return "Choose a saved texture asset, not a temporary texture.";
-                if (texture.dimension != group.dimension) return "This slot requires " + group.dimension + ".";
+                var reason = TextureProblem(texture, group.dimension);
+                if (reason != null) return reason;
             }
             var desired = clear ? null : texture;
             var changed = group.members.Where(item => item.texture != desired).ToList();

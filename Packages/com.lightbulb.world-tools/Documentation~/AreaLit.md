@@ -4,6 +4,10 @@ Safely bake, inspect, adjust, and apply AreaLit occlusion maps with Bakery. Open
 
 General-purpose helpers have a separate entry: **Tools > Lightbulb > AreaLit Configuration Audit**. Both tools are included in Lightbulb World Tools. The existing occlusion workflow, asset GUIDs, assembly identity, and recovery paths are preserved.
 
+## Configure a hierarchy
+
+To configure a single hierarchy, right-click its parent and choose **Lightbulb > Configure Mochie AreaLit**. This includes the parent, inactive children, and disabled renderers. Choose **Enable** or **Disable** for AreaLit and **Keep**, **Assign**, or **Clear** for each binding. **Mesh** accepts the AreaLit light-data texture. **Texture 0 through 2** accept 2D textures and **Texture 3+** accepts a 2D texture array. **Apply to hierarchy** edits each compatible shared material once. Other objects using those materials see the edits. Unity Undo restores the batch.
+
 ## Configuration audit
 
 Choose **Run audit** for a read-only scan of loaded original scenes. The **Include inactive objects and disabled components** option controls the audit and all its bulk/UV operations. AreaLit-disabled materials are not enabled or edited by the tool. The scan uses renderer shared materials and projector materials, not a project-wide search through unused assets.

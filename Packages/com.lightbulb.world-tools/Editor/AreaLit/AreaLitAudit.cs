@@ -132,9 +132,12 @@ namespace Lightbulb.AreaLitOcclusion
             var receivers = materials.Values.Where(item => item.receiver).ToList();
             var ordinaryReceivers = receivers.Where(item => !item.emitter).Select(item => item.material).ToList();
             var recursiveCount = receivers.Count(item => item.emitter);
-            report.bindings.Add(AreaLitAuditBindings.Collect("_LightMesh", "Mesh", true, receivers.Select(item => item.material)));
-            for (var slot = 0; slot < 4; slot++)
-                report.bindings.Add(AreaLitAuditBindings.Collect("_LightTex" + slot, slot == 3 ? "Texture 3+" : "Texture " + slot, slot == 0, ordinaryReceivers, recursiveCount));
+            foreach (var slot in AreaLitAuditBindings.ReceiverSlots)
+            {
+                var mesh = slot.property == "_LightMesh";
+                report.bindings.Add(AreaLitAuditBindings.Collect(slot.property, slot.label, mesh || slot.property == "_LightTex0",
+                    mesh ? receivers.Select(item => item.material) : ordinaryReceivers, mesh ? 0 : recursiveCount));
+            }
             report.bindings.Add(AreaLitAuditBindings.Collect("_AreaLitOcclusion", "AreaLit occlusion map", false, ordinaryReceivers));
             var dataTextures = new HashSet<Texture>();
             var lightTextures = new HashSet<Texture>();
