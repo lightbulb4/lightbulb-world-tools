@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.31 - 2026-11-21
+
+- Mochie Light Volumes now lists materials that have no asset file in a warning and continues applying changes to saved materials.
+- Pack Mochie Materials detects the packing API used by Mochie v2.13 or v2.14.2. It follows each version's channel sampling and preserves shared packed textures when repacking.
+
 ## 0.1.30 - 2026-11-20
 
 - Right-click a Hierarchy object and choose **Lightbulb > Configure Mochie AreaLit** to enable or disable AreaLit on compatible shared materials used by the object and its descendants, including inactive children.

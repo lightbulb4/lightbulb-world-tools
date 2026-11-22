@@ -44,7 +44,19 @@ namespace Lightbulb.WorldTools
         internal static bool Supports(Material material) => material != null && material.shader != null &&
             (material.shader.name == "Mochie/Standard" || material.shader.name == "Mochie/Standard Lite");
 
-        internal static List<Material> Collect(Scene scene) => SceneMaterials.Collect(scene).Where(Supports).ToList();
+        internal static List<Material> Collect(Scene scene, Action<string> warn = null)
+        {
+            var materials = new List<Material>();
+            var skipped = new List<string>();
+            foreach (Material material in SceneMaterials.Collect(scene).Where(Supports))
+            {
+                if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(material))) skipped.Add(material.name);
+                else materials.Add(material);
+            }
+            if (skipped.Count > 0)
+                warn?.Invoke($"Skipped {skipped.Count} material(s) with no asset file: {string.Join(", ", skipped)}.");
+            return materials;
+        }
 
         internal static string Counts(IEnumerable<Material> materials, int settingIndex)
         {
@@ -84,7 +96,7 @@ namespace Lightbulb.WorldTools
 
             // Resolve the current scene on every operation. Preflight the entire batch before editing assets.
             var changes = new List<(Material material, Edit edit, float value)>();
-            foreach (Material material in Collect(scene))
+            foreach (Material material in Collect(scene, warning => Debug.LogWarning(warning)))
             {
                 string reason = EmptyMaterialMaps.CannotEdit(material);
                 if (reason != null) throw new InvalidOperationException(material.name + ": " + reason + ". No materials changed.");

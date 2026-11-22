@@ -53,10 +53,13 @@ namespace Lightbulb.WorldTools.Tests
             root = null;
         }
 
-        private Texture2D Texture()
+        private static bool HasChannelApi => AppDomain.CurrentDomain.GetAssemblies()
+            .Any(a => a.GetType("Mochie.TexturePacker+Channel") != null);
+
+        private Texture2D Texture(Color? color = null)
         {
-            var image = new Texture2D(16, 16, TextureFormat.RGB24, false, true);
-            image.SetPixels(Enumerable.Repeat(new Color(0.4f, 0.4f, 0.4f), 256).ToArray());
+            var image = new Texture2D(16, 16, TextureFormat.RGBA32, false, true);
+            image.SetPixels(Enumerable.Repeat(color ?? new Color(0.4f, 0.4f, 0.4f), 256).ToArray());
             image.Apply();
             string path = AssetDatabase.GenerateUniqueAssetPath(root + "/source.png");
             File.WriteAllBytes(path, image.EncodeToPNG());
@@ -309,11 +312,71 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(File.Exists(result.Outputs.Single()), Is.True);
         }
 
+        [Test]
+        public void PrimaryUsesNativeSourceComponentAndRepackingProtectsSharedPng()
+        {
+            var a = Material();
+            var b = Material();
+            var ao = Texture(new Color(.2f, .7f, .4f));
+            var roughness = Texture();
+            foreach (var mat in new[] { a, b })
+            {
+                mat.SetTexture("_OcclusionMap", ao);
+                mat.SetTexture("_RoughnessMap", roughness);
+            }
+            var adapter = new MochieScenePacker.Adapter();
+            var first = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, false), adapter);
+            Assert.That(first.Errors, Is.Empty);
+            string shared = first.Outputs.Single();
+            Assert.That(RawPixel(shared).r, Is.EqualTo(HasChannelApi ? .7f : .2f).Within(.01f));
+            var original = File.ReadAllBytes(shared);
+            a.SetFloat("_PrimaryWorkflow", 0);
+            a.SetTexture("_OcclusionMap", roughness);
+            a.SetTexture("_RoughnessMap", ao);
+            var second = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, false), adapter);
+            Assert.That(second.Errors, Is.Empty);
+            Assert.That(second.Outputs.Single(), Is.Not.EqualTo(shared));
+            Assert.That(AssetDatabase.GetAssetPath(b.GetTexture("_PackedMap")), Is.EqualTo(shared));
+            Assert.That(File.ReadAllBytes(shared), Is.EqualTo(original));
+        }
+
+        [Test]
+        public void DetailAlphaFollowsInstalledApiAndOutputSharingRespectsBlendModes()
+        {
+            var a = Material();
+            var b = Material();
+            var ao = Texture(new Color(.3f, .7f, .4f, .2f));
+            var roughness = Texture(new Color(.6f, .1f, .4f, .8f));
+            foreach (var mat in new[] { a, b })
+            {
+                mat.SetTexture("_DetailOcclusionMap", ao);
+                mat.SetTexture("_DetailRoughnessMap", roughness);
+                mat.SetInt("_DetailMaskMode", 0);
+                mat.SetInt("_DetailMetallicBlend", 0);
+            }
+            a.SetInt("_DetailOcclusionBlend", 1);
+            a.SetInt("_DetailRoughnessBlend", 2);
+            b.SetInt("_DetailOcclusionBlend", 2);
+            b.SetInt("_DetailRoughnessBlend", 1);
+            var result = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, true), new MochieScenePacker.Adapter());
+            Assert.That(result.Errors, Is.Empty);
+            Assert.That(result.Outputs.Count, Is.EqualTo(HasChannelApi ? 2 : 1));
+            Color pixelA = RawPixel(AssetDatabase.GetAssetPath(a.GetTexture("_DetailPackedMap")));
+            Assert.That(pixelA.r, Is.EqualTo(.3f).Within(.01f));
+            Assert.That(pixelA.g, Is.EqualTo(.6f).Within(.01f));
+            if (HasChannelApi)
+            {
+                Assert.That(pixelA.a, Is.EqualTo(.2f).Within(.01f));
+                Assert.That(pixelA.b, Is.Zero.Within(.01f));
+                Assert.That(RawPixel(AssetDatabase.GetAssetPath(b.GetTexture("_DetailPackedMap"))).a, Is.EqualTo(.8f).Within(.01f));
+            }
+        }
+
         [TestCase("offset")]
         [TestCase("scale")]
         [TestCase("source")]
         [TestCase("height")]
-        public void DifferentPackingInputsProduceSeparateOutputs(string difference)
+        public void OutputSharingFollowsTheInstalledPackersSamplingInputs(string difference)
         {
             Material a = Material();
             Material b = Material();
@@ -329,9 +392,10 @@ namespace Lightbulb.WorldTools.Tests
             if (difference == "height") b.SetTexture("_HeightMap", source);
             var result = MochieScenePacker.Apply(MochieScenePacker.Collect(scene, true), new MochieScenePacker.Adapter());
             Assert.That(result.Errors, Is.Empty);
-            Assert.That(result.Outputs.Count, Is.EqualTo(2));
-            Assert.That(result.Reused, Is.Zero);
-            Assert.That(a.GetTexture("_PackedMap"), Is.Not.EqualTo(b.GetTexture("_PackedMap")));
+            bool shared = HasChannelApi && (difference == "offset" || difference == "scale");
+            Assert.That(result.Outputs.Count, Is.EqualTo(shared ? 1 : 2));
+            Assert.That(result.Reused, Is.EqualTo(shared ? 1 : 0));
+            Assert.That(a.GetTexture("_PackedMap") == b.GetTexture("_PackedMap"), Is.EqualTo(shared));
         }
 
         [TestCase("Mochie/Standard", "Metallic", 2)]

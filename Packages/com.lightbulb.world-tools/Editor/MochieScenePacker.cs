@@ -198,30 +198,26 @@ namespace Lightbulb.WorldTools
         // Optional adapter: no Mochie assembly reference, copied packer, or edits to the installed shader.
         internal sealed class Adapter
         {
-            private readonly MethodInfo pack;
+            private readonly PackingApi api;
             private readonly MethodInfo keywords;
             private readonly MethodInfo blend;
-            private readonly MethodInfo scaleAndOffset;
             private readonly object editor;
 
             internal Adapter()
             {
                 Type packer = FindType("Mochie.TexturePacker");
                 Type editorType = FindType("Mochie.StandardEditor");
-                editor = Activator.CreateInstance(editorType);
-                var signature = new List<Type> { typeof(Material) };
-                for (int i = 0; i < 4; i++) { signature.Add(typeof(MaterialProperty)); signature.Add(typeof(float)); }
-                signature.Add(typeof(MaterialProperty));
-                pack = packer.GetMethod("PackTextures", BindingFlags.Public | BindingFlags.Static, null, signature.ToArray(), null);
+                api = ChannelPacking.TryBind(packer, editorType) ?? (PackingApi)PropertyPacking.TryBind(packer);
+                if (api == null)
+                    throw new InvalidOperationException("Unsupported Mochie texture packer. Expected the Channel or MaterialProperty packing API.");
                 keywords = editorType.GetMethod("SetKeywords", BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(Material) }, null);
                 blend = editorType.GetMethod("SetBlendMode", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Material) }, null);
-                scaleAndOffset = packer.GetMethod("GetTextureScaleAndOffset", BindingFlags.Public | BindingFlags.Static, null,
-                    new[] { typeof(Material), typeof(MaterialProperty), typeof(string) }, null);
-                if (pack == null || pack.ReturnType != typeof(Texture2D) || keywords == null || blend == null || scaleAndOffset == null || scaleAndOffset.ReturnType != typeof(Vector4))
-                    throw new InvalidOperationException("The installed Mochie packing API is incompatible. No materials changed.");
-                Shader shader = Shader.Find("Hidden/Mochie/TexturePacker");
+                if (keywords == null || blend == null)
+                    throw new InvalidOperationException("The installed Mochie Standard editor is missing SetKeywords or SetBlendMode.");
+                editor = Activator.CreateInstance(editorType);
+                Shader shader = Shader.Find(api.ShaderName);
                 if (shader == null || !shader.isSupported || ShaderUtil.ShaderHasError(shader))
-                    throw new InvalidOperationException("Mochie's texture-packing shader is missing or cannot run on this graphics device.");
+                    throw new InvalidOperationException($"Mochie shader {api.ShaderName} is missing or cannot run on this graphics device.");
             }
 
             private static Type FindType(string name)
@@ -231,55 +227,140 @@ namespace Lightbulb.WorldTools
                 return types[0];
             }
 
-            private sealed class Request
+            // Bind to the available signatures so point releases can use the same integration.
+            private abstract class PackingApi
             {
-                internal object[] Arguments;
-                internal string Key;
+                internal abstract string ShaderName { get; }
+                internal abstract object[] Arguments(Material material, bool detail, BinaryWriter key);
+                internal abstract Texture2D Bake(Material material, bool detail, object[] arguments);
+
+                protected static MethodInfo Method(Type type, string name, params Type[] parameters) =>
+                    type.GetMethod(name, BindingFlags.Public | BindingFlags.Static, null, parameters, null);
+
+                protected static void WriteTexture(BinaryWriter key, Texture texture)
+                {
+                    key.Write(texture != null);
+                    if (texture == null) return;
+                    if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string guid, out long localId))
+                        throw new InvalidOperationException("Source texture has no stable asset identity.");
+                    key.Write(guid);
+                    key.Write(localId);
+                    key.Write(AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(texture)).ToString());
+                }
             }
 
-            private Request BuildRequest(Material material, bool detail)
+            private sealed class PropertyPacking : PackingApi
             {
-                if (!Eligible(material, detail)) throw new InvalidOperationException("Material is no longer eligible for packing.");
-                var properties = MaterialEditor.GetMaterialProperties(new Object[] { material }).ToDictionary(p => p.name);
-                string prefix = detail ? "_Detail" : "_";
-                var arguments = new List<object> { material };
-                // Encode exact native inputs, not the whole material. In particular, AreaLit settings,
-                // runtime strengths and material names do not change the packed pixels.
-                using (var bytes = new MemoryStream())
-                using (var key = new BinaryWriter(bytes))
+                internal override string ShaderName => "Hidden/Mochie/TexturePacker";
+                private readonly MethodInfo pack, scaleAndOffset;
+
+                private PropertyPacking(MethodInfo pack, MethodInfo scaleAndOffset)
+                { this.pack = pack; this.scaleAndOffset = scaleAndOffset; }
+
+                internal static PropertyPacking TryBind(Type packer)
                 {
-                    key.Write(detail);
-                    foreach (string channel in new[] { "Occlusion", "Roughness", "Metallic", "Height" })
+                    var signature = new List<Type> { typeof(Material) };
+                    for (int i = 0; i < 4; i++) { signature.Add(typeof(MaterialProperty)); signature.Add(typeof(float)); }
+                    signature.Add(typeof(MaterialProperty));
+                    var pack = Method(packer, "PackTextures", signature.ToArray());
+                    var st = Method(packer, "GetTextureScaleAndOffset", typeof(Material), typeof(MaterialProperty), typeof(string));
+                    return pack?.ReturnType == typeof(Texture2D) && st?.ReturnType == typeof(Vector4) ? new PropertyPacking(pack, st) : null;
+                }
+
+                internal override object[] Arguments(Material material, bool detail, BinaryWriter key)
+                {
+                    var properties = MaterialEditor.GetMaterialProperties(new Object[] { material }).ToDictionary(p => p.name);
+                    var args = new List<object> { material };
+                    foreach (string name in Maps(detail))
                     {
-                        if (detail && channel == "Height") { arguments.Add(null); arguments.Add(1f); continue; }
-                        var property = properties[prefix + channel + "Map"];
-                        arguments.Add(property);
-                        // Keep source channels unscaled. Strengths stay editable on each material,
-                        // including materials sharing this output, and are applied by the shader.
-                        arguments.Add(1f);
-                        Vector4 st = (Vector4)scaleAndOffset.Invoke(null, new object[] { material, property, property.name });
+                        MaterialProperty property = properties[name];
+                        args.Add(property);
+                        args.Add(1f);
+                        Vector4 st = (Vector4)scaleAndOffset.Invoke(null, new object[] { material, property, name });
                         for (int i = 0; i < 4; i++) key.Write(st[i]);
-                        Texture texture = property.textureValue;
-                        key.Write(texture != null);
-                        if (texture != null)
-                        {
-                            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string guid, out long localId))
-                                throw new InvalidOperationException("Source texture has no stable asset identity.");
-                            key.Write(guid);
-                            key.Write(localId);
-                            key.Write(AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(texture)).ToString());
-                        }
+                        WriteTexture(key, property.textureValue);
                     }
-                    arguments.Add(properties[prefix + "PackedMap"]);
-                    key.Flush();
-                    return new Request { Arguments = arguments.ToArray(), Key = Convert.ToBase64String(bytes.ToArray()) };
+                    if (detail) { args.Add(null); args.Add(1f); }
+                    args.Add(properties[detail ? "_DetailPackedMap" : "_PackedMap"]);
+                    return args.ToArray();
+                }
+
+                internal override Texture2D Bake(Material material, bool detail, object[] arguments) =>
+                    (Texture2D)pack.Invoke(null, arguments);
+            }
+
+            private sealed class ChannelPacking : PackingApi
+            {
+                internal override string ShaderName => "Hidden/Mochie/ChannelPacker";
+                private readonly MethodInfo pack, packDetail;
+                private readonly ConstructorInfo channel;
+
+                private ChannelPacking(MethodInfo pack, MethodInfo packDetail, ConstructorInfo channel)
+                { this.pack = pack; this.packDetail = packDetail; this.channel = channel; }
+
+                internal static ChannelPacking TryBind(Type packer, Type editorType)
+                {
+                    Type type = packer.GetNestedType("Channel");
+                    if (type == null) return null;
+                    var pack = Method(packer, "PackTextures", typeof(Material), typeof(string), type, type, type, type);
+                    var channel = type.GetConstructor(new[] { typeof(Texture), typeof(int), typeof(float), typeof(float), typeof(bool) });
+                    var detail = editorType.GetMethod("PackDetailTextures", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
+                        null, new[] { typeof(Material) }, null);
+                    return pack?.ReturnType == typeof(Texture2D) && channel != null && detail?.ReturnType == typeof(bool)
+                        ? new ChannelPacking(pack, detail, channel) : null;
+                }
+
+                internal override object[] Arguments(Material material, bool detail, BinaryWriter key)
+                {
+                    if (detail)
+                    {
+                        // Mochie's Standard inspector chooses the shared alpha map and neutral values
+                        // for missing maps from the mask and blend modes. Let it do that work.
+                        key.Write(material.GetInt("_DetailMaskMode"));
+                        foreach (string name in Maps(true))
+                        {
+                            WriteTexture(key, material.GetTexture(name));
+                            key.Write(material.GetInt(name.Substring(0, name.Length - 3) + "Blend"));
+                        }
+                        return new object[] { material };
+                    }
+
+                    var args = new List<object> { material, "_PackedMap" };
+                    foreach (string name in Maps(false))
+                    {
+                        Texture texture = material.GetTexture(name);
+                        WriteTexture(key, texture);
+                        // Standard samples green using shared UVs. Pack at unit strength to retain
+                        // editable sliders and allow otherwise identical materials to share pixels.
+                        args.Add(channel.Invoke(new object[] { texture, 1, 1f, 1f, name == "_OcclusionMap" }));
+                    }
+                    return args.ToArray();
+                }
+
+                internal override Texture2D Bake(Material material, bool detail, object[] arguments)
+                {
+                    string destination = detail ? "_DetailPackedMap" : "_PackedMap";
+                    // Mochie can overwrite its own previous output. It may be shared by another material.
+                    material.SetTexture(destination, null);
+                    if (!detail) return (Texture2D)pack.Invoke(null, arguments);
+                    return (bool)packDetail.Invoke(null, arguments) ? material.GetTexture(destination) as Texture2D : null;
                 }
             }
 
             internal void Pack(Material material, bool detail, Dictionary<string, Texture2D> outputs, Result result)
             {
-                Request request = BuildRequest(material, detail);
-                if (outputs.TryGetValue(request.Key, out Texture2D shared))
+                if (!Eligible(material, detail)) throw new InvalidOperationException("Material is no longer eligible for packing.");
+                object[] arguments;
+                string cacheKey;
+                using (var bytes = new MemoryStream())
+                using (var key = new BinaryWriter(bytes))
+                {
+                    key.Write(detail);
+                    arguments = api.Arguments(material, detail, key);
+                    key.Flush();
+                    cacheKey = Convert.ToBase64String(bytes.ToArray());
+                }
+                if (outputs.TryGetValue(cacheKey, out Texture2D shared))
                 {
                     Configure(material, detail, shared);
                     result.Reused++;
@@ -288,13 +369,13 @@ namespace Lightbulb.WorldTools
                 RenderTexture previous = RenderTexture.active;
                 bool srgb = GL.sRGBWrite;
                 Texture2D output;
-                try { GL.sRGBWrite = false; output = (Texture2D)pack.Invoke(null, request.Arguments); }
+                try { GL.sRGBWrite = false; output = api.Bake(material, detail, arguments); }
                 finally { RenderTexture.active = previous; GL.sRGBWrite = srgb; }
                 string packedProperty = detail ? "_DetailPackedMap" : "_PackedMap";
                 if (output == null || material.GetTexture(packedProperty) != output)
                     throw new InvalidOperationException("Mochie did not assign the packed texture.");
                 Configure(material, detail, output);
-                outputs.Add(request.Key, output);
+                outputs.Add(cacheKey, output);
                 result.Outputs.Add(AssetDatabase.GetAssetPath(output));
             }
 

@@ -120,6 +120,26 @@ namespace Lightbulb.WorldTools.Tests
             Assert.That(standard.GetFloat(Settings[1].Property), Is.Zero);
         }
 
+        [Test] public void SkipsFilelessMaterialsOnceAndStillEditsFileBackedMaterialsIncludingInstanceNames()
+        {
+            var instance = new Material(standard) { name = "Doors1 (Instance)" };
+            try
+            {
+                new GameObject("Doors").AddComponent<MeshRenderer>().sharedMaterials = new[] { instance, instance };
+                var saved = MakeMaterial("Saved (Instance)", standard.shader);
+                new GameObject("Saved door").AddComponent<MeshRenderer>().sharedMaterial = saved;
+                float before = instance.GetFloat(Settings[6].Property);
+                string warning = null;
+                Assert.That(Collect(scene, text => warning = text), Is.EquivalentTo(new[] { standard, lite, saved }));
+                Assert.That(warning, Is.EqualTo("Skipped 1 material(s) with no asset file: Doors1 (Instance)."));
+                LogAssert.Expect(LogType.Warning, warning);
+                Assert.That(Apply(scene, new[] { new Edit(6, Operation.Set, 42) }), Is.EqualTo(3));
+                Assert.That(instance.GetFloat(Settings[6].Property), Is.EqualTo(before));
+                Assert.That(saved.GetFloat(Settings[6].Property), Is.EqualTo(42));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(instance); }
+        }
+
         [Test] public void PreflightRejectsReadonlyMaterialBeforeChangingAnyMaterial()
         {
             float before = lite.GetFloat(Settings[6].Property);

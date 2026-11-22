@@ -12,7 +12,7 @@ namespace Lightbulb.WorldTools
         [SerializeField] private int[] operations = new int[7];
         [SerializeField] private float[] values = { 0, 1, 0, 1, 0, 1, 0 };
         private Material[] materials;
-        private string sceneName, message;
+        private string sceneName, message, skippedWarning;
         private bool showMaterials, error;
         private Vector2 scroll;
 
@@ -59,7 +59,8 @@ namespace Lightbulb.WorldTools
                     if (materials != null)
                     {
                         EditorGUILayout.LabelField($"{sceneName}: {materials.Length} matching materials", EditorStyles.boldLabel);
-                        if (materials.Length == 0)
+                        if (skippedWarning != null) EditorGUILayout.HelpBox(skippedWarning, MessageType.Warning);
+                        if (materials.Length == 0 && skippedWarning == null)
                             EditorGUILayout.HelpBox("No Mochie/Standard or Mochie/Standard Lite materials are assigned to this scene.", MessageType.Info);
                         showMaterials = EditorGUILayout.Foldout(showMaterials, "Materials", true);
                         if (showMaterials)
@@ -109,7 +110,8 @@ namespace Lightbulb.WorldTools
         private void Scan()
         {
             var scene = SceneMaterials.Active();
-            materials = MochieLightVolumes.Collect(scene).ToArray();
+            skippedWarning = null;
+            materials = MochieLightVolumes.Collect(scene, warning => skippedWarning = warning).ToArray();
             sceneName = scene.name;
         }
         private void Apply(MochieLightVolumes.Edit[] edits)
